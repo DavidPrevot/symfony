@@ -11,6 +11,7 @@
 
 namespace Symfony\Component\Translation\Tests;
 
+use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\Translator;
 use Symfony\Component\Translation\MessageCatalogue;
 use Symfony\Component\Translation\MessageSelector;
@@ -25,7 +26,7 @@ class TranslatorCacheTest extends \PHPUnit_Framework_TestCase
         $this->deleteTmpDir();
     }
 
-    public function tearDown()
+    protected function tearDown()
     {
         $this->deleteTmpDir();
     }
@@ -101,6 +102,41 @@ class TranslatorCacheTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('foobarbax (sr@latin)', $translator->trans('foobarbax'));
     }
 
+    public function testRefreshCacheWhenResourcesChange()
+    {
+        // prime the cache
+        $loader = $this->getMock('Symfony\Component\Translation\Loader\LoaderInterface');
+        $loader
+            ->method('load')
+            ->will($this->returnValue($this->getCatalogue('fr', array(
+                'foo' => 'foo A',
+            ))))
+        ;
+
+        $translator = new Translator('fr', new MessageSelector(), $this->tmpDir, true);
+        $translator->setLocale('fr');
+        $translator->addLoader('loader', $loader);
+        $translator->addResource('loader', 'foo', 'fr');
+
+        $this->assertEquals('foo A', $translator->trans('foo'));
+
+        // add a new resource to refresh the cache
+        $loader = $this->getMock('Symfony\Component\Translation\Loader\LoaderInterface');
+        $loader
+            ->method('load')
+            ->will($this->returnValue($this->getCatalogue('fr', array(
+                'foo' => 'foo B',
+            ))))
+        ;
+
+        $translator = new Translator('fr', new MessageSelector(), $this->tmpDir, true);
+        $translator->setLocale('fr');
+        $translator->addLoader('loader', $loader);
+        $translator->addResource('loader', 'bar', 'fr');
+
+        $this->assertEquals('foo B', $translator->trans('foo'));
+    }
+
     public function testTransWithCachingWithInvalidLocale()
     {
         $loader = $this->getMock('Symfony\Component\Translation\Loader\LoaderInterface');
@@ -127,6 +163,37 @@ class TranslatorCacheTest extends \PHPUnit_Framework_TestCase
         } catch (\InvalidArgumentException $e) {
             $this->assertFalse(file_exists($this->tmpDir.'/catalogue.invalid locale.php'));
         }
+    }
+
+    public function testDifferentCacheFilesAreUsedForDifferentSetsOfFallbackLocales()
+    {
+        /*
+         * Because the cache file contains a catalogue including all of its fallback
+         * catalogues (either "inlined" in Symfony 2.7 production or "standalone"),
+         * we must take the active set of fallback locales into consideration when
+         * loading a catalogue from the cache.
+         */
+        $translator = new Translator('a', null, $this->tmpDir);
+        $translator->setFallbackLocales(array('b'));
+
+        $translator->addLoader('array', new ArrayLoader());
+        $translator->addResource('array', array('foo' => 'foo (a)'), 'a');
+        $translator->addResource('array', array('bar' => 'bar (b)'), 'b');
+
+        $this->assertEquals('bar (b)', $translator->trans('bar'));
+
+        // Remove fallback locale
+        $translator->setFallbackLocales(array());
+        $this->assertEquals('bar', $translator->trans('bar'));
+
+        // Use a fresh translator with no fallback locales, result should be the same
+        $translator = new Translator('a', null, $this->tmpDir);
+
+        $translator->addLoader('array', new ArrayLoader());
+        $translator->addResource('array', array('foo' => 'foo (a)'), 'a');
+        $translator->addResource('array', array('bar' => 'bar (b)'), 'b');
+
+        $this->assertEquals('bar', $translator->trans('bar'));
     }
 
     protected function getCatalogue($locale, $messages)

@@ -30,6 +30,7 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
  */
 class Request
 {
+    const HEADER_FORWARDED = 'forwarded';
     const HEADER_CLIENT_IP = 'client_ip';
     const HEADER_CLIENT_HOST = 'client_host';
     const HEADER_CLIENT_PROTO = 'client_proto';
@@ -46,6 +47,9 @@ class Request
     const METHOD_TRACE = 'TRACE';
     const METHOD_CONNECT = 'CONNECT';
 
+    /**
+     * @var string[]
+     */
     protected static $trustedProxies = array();
 
     /**
@@ -62,10 +66,13 @@ class Request
      * Names for headers that can be trusted when
      * using trusted proxies.
      *
-     * The default names are non-standard, but widely used
+     * The FORWARDED header is the standard as of rfc7239.
+     *
+     * The other headers are non-standard, but widely used
      * by popular reverse proxies (like Apache mod_proxy or Amazon EC2).
      */
     protected static $trustedHeaders = array(
+        self::HEADER_FORWARDED => 'FORWARDED',
         self::HEADER_CLIENT_IP => 'X_FORWARDED_FOR',
         self::HEADER_CLIENT_HOST => 'X_FORWARDED_HOST',
         self::HEADER_CLIENT_PROTO => 'X_FORWARDED_PROTO',
@@ -609,8 +616,8 @@ class Request
      * The following header keys are supported:
      *
      *  * Request::HEADER_CLIENT_IP:    defaults to X-Forwarded-For   (see getClientIp())
-     *  * Request::HEADER_CLIENT_HOST:  defaults to X-Forwarded-Host  (see getClientHost())
-     *  * Request::HEADER_CLIENT_PORT:  defaults to X-Forwarded-Port  (see getClientPort())
+     *  * Request::HEADER_CLIENT_HOST:  defaults to X-Forwarded-Host  (see getHost())
+     *  * Request::HEADER_CLIENT_PORT:  defaults to X-Forwarded-Port  (see getPort())
      *  * Request::HEADER_CLIENT_PROTO: defaults to X-Forwarded-Proto (see getScheme() and isSecure())
      *
      * Setting an empty value allows to disable the trusted header for the given key.
@@ -823,24 +830,26 @@ class Request
      */
     public function getClientIps()
     {
+        $clientIps = array();
         $ip = $this->server->get('REMOTE_ADDR');
 
-        if (!self::$trustedProxies) {
+        if (!$this->isFromTrustedProxy()) {
             return array($ip);
         }
 
-        if (!self::$trustedHeaders[self::HEADER_CLIENT_IP] || !$this->headers->has(self::$trustedHeaders[self::HEADER_CLIENT_IP])) {
-            return array($ip);
+        if (self::$trustedHeaders[self::HEADER_FORWARDED] && $this->headers->has(self::$trustedHeaders[self::HEADER_FORWARDED])) {
+            $forwardedHeader = $this->headers->get(self::$trustedHeaders[self::HEADER_FORWARDED]);
+            preg_match_all('{(for)=("?\[?)([a-z0-9\.:_\-/]*)}', $forwardedHeader, $matches);
+            $clientIps = $matches[3];
+        } elseif (self::$trustedHeaders[self::HEADER_CLIENT_IP] && $this->headers->has(self::$trustedHeaders[self::HEADER_CLIENT_IP])) {
+            $clientIps = array_map('trim', explode(',', $this->headers->get(self::$trustedHeaders[self::HEADER_CLIENT_IP])));
         }
 
-        $clientIps = array_map('trim', explode(',', $this->headers->get(self::$trustedHeaders[self::HEADER_CLIENT_IP])));
         $clientIps[] = $ip; // Complete the IP chain with the IP the request actually came from
-
         $ip = $clientIps[0]; // Fallback to this when the client IP falls into the range of trusted proxies
 
-        // Eliminate all IPs from the forwarded IP chain which are trusted proxies
         foreach ($clientIps as $key => $clientIp) {
-            // Remove port on IPv4 address (unfortunately, it does happen)
+            // Remove port (unfortunately, it does happen)
             if (preg_match('{((?:\d+\.){3}\d+)\:\d+}', $clientIp, $match)) {
                 $clientIps[$key] = $clientIp = $match[1];
             }
@@ -991,7 +1000,7 @@ class Request
      */
     public function getPort()
     {
-        if (self::$trustedProxies) {
+        if ($this->isFromTrustedProxy()) {
             if (self::$trustedHeaders[self::HEADER_CLIENT_PORT] && $port = $this->headers->get(self::$trustedHeaders[self::HEADER_CLIENT_PORT])) {
                 return $port;
             }
@@ -1009,7 +1018,7 @@ class Request
             }
 
             if (false !== $pos) {
-                return intval(substr($host, $pos + 1));
+                return (int) substr($host, $pos + 1);
             }
 
             return 'https' === $this->getScheme() ? 443 : 80;
@@ -1227,7 +1236,7 @@ class Request
      */
     public function isSecure()
     {
-        if (self::$trustedProxies && self::$trustedHeaders[self::HEADER_CLIENT_PROTO] && $proto = $this->headers->get(self::$trustedHeaders[self::HEADER_CLIENT_PROTO])) {
+        if ($this->isFromTrustedProxy() && self::$trustedHeaders[self::HEADER_CLIENT_PROTO] && $proto = $this->headers->get(self::$trustedHeaders[self::HEADER_CLIENT_PROTO])) {
             return in_array(strtolower(current(explode(',', $proto))), array('https', 'on', 'ssl', '1'));
         }
 
@@ -1255,7 +1264,7 @@ class Request
      */
     public function getHost()
     {
-        if (self::$trustedProxies && self::$trustedHeaders[self::HEADER_CLIENT_HOST] && $host = $this->headers->get(self::$trustedHeaders[self::HEADER_CLIENT_HOST])) {
+        if ($this->isFromTrustedProxy() && self::$trustedHeaders[self::HEADER_CLIENT_HOST] && $host = $this->headers->get(self::$trustedHeaders[self::HEADER_CLIENT_HOST])) {
             $elements = explode(',', $host);
 
             $host = $elements[count($elements) - 1];
@@ -1638,7 +1647,7 @@ class Request
         foreach (array_keys($languages) as $lang) {
             if (strstr($lang, '-')) {
                 $codes = explode('-', $lang);
-                if ($codes[0] == 'i') {
+                if ('i' === $codes[0]) {
                     // Language not listed in ISO 639 that are not variants
                     // of any listed language, which can be registered with the
                     // i-prefix, such as i-cherokee
@@ -1647,7 +1656,7 @@ class Request
                     }
                 } else {
                     for ($i = 0, $max = count($codes); $i < $max; $i++) {
-                        if ($i == 0) {
+                        if ($i === 0) {
                             $lang = strtolower($codes[0]);
                         } else {
                             $lang .= '_'.strtoupper($codes[$i]);
@@ -1951,7 +1960,7 @@ class Request
 
         $len = strlen($prefix);
 
-        if (preg_match("#^(%[[:xdigit:]]{2}|.){{$len}}#", $string, $match)) {
+        if (preg_match(sprintf('#^(%%[[:xdigit:]]{2}|.){%d}#', $len), $string, $match)) {
             return $match[0];
         }
 
@@ -1971,5 +1980,10 @@ class Request
         }
 
         return new static($query, $request, $attributes, $cookies, $files, $server, $content);
+    }
+
+    private function isFromTrustedProxy()
+    {
+        return self::$trustedProxies && IpUtils::checkIp($this->server->get('REMOTE_ADDR'), self::$trustedProxies);
     }
 }

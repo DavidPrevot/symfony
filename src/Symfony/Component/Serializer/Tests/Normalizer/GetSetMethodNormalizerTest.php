@@ -22,8 +22,6 @@ use Symfony\Component\Serializer\Mapping\Loader\AnnotationLoader;
 use Symfony\Component\Serializer\Mapping\Factory\ClassMetadataFactory;
 use Symfony\Component\Serializer\Tests\Fixtures\GroupDummy;
 
-require_once __DIR__.'/../../Annotation/Groups.php';
-
 class GetSetMethodNormalizerTest extends \PHPUnit_Framework_TestCase
 {
     /**
@@ -40,6 +38,12 @@ class GetSetMethodNormalizerTest extends \PHPUnit_Framework_TestCase
         $this->serializer = $this->getMock(__NAMESPACE__.'\SerializerNormalizer');
         $this->normalizer = new GetSetMethodNormalizer();
         $this->normalizer->setSerializer($this->serializer);
+    }
+
+    public function testInterface()
+    {
+        $this->assertInstanceOf('Symfony\Component\Serializer\Normalizer\NormalizerInterface', $this->normalizer);
+        $this->assertInstanceOf('Symfony\Component\Serializer\Normalizer\DenormalizerInterface', $this->normalizer);
     }
 
     public function testNormalize()
@@ -95,8 +99,13 @@ class GetSetMethodNormalizerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('bar', $obj->getBar());
     }
 
-    public function testDenormalizeOnCamelCaseFormat()
+    /**
+     * @group legacy
+     */
+    public function testLegacyDenormalizeOnCamelCaseFormat()
     {
+        $this->iniSet('error_reporting', -1 & ~E_USER_DEPRECATED);
+
         $this->normalizer->setCamelizedAttributes(array('camel_case'));
         $obj = $this->normalizer->denormalize(
             array('camel_case' => 'camelCase'),
@@ -111,8 +120,13 @@ class GetSetMethodNormalizerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(new GetSetDummy(), $this->normalizer->denormalize(null, __NAMESPACE__.'\GetSetDummy'));
     }
 
-    public function testCamelizedAttributesNormalize()
+    /**
+     * @group legacy
+     */
+    public function testLegacyCamelizedAttributesNormalize()
     {
+        $this->iniSet('error_reporting', -1 & ~E_USER_DEPRECATED);
+
         $obj = new GetCamelizedDummy('dunglas.fr');
         $obj->setFooBar('les-tilleuls.coop');
         $obj->setBar_foo('lostinthesupermarket.fr');
@@ -132,8 +146,13 @@ class GetSetMethodNormalizerTest extends \PHPUnit_Framework_TestCase
         ));
     }
 
-    public function testCamelizedAttributesDenormalize()
+    /**
+     * @group legacy
+     */
+    public function testLegacyCamelizedAttributesDenormalize()
     {
+        $this->iniSet('error_reporting', -1 & ~E_USER_DEPRECATED);
+
         $obj = new GetCamelizedDummy('dunglas.fr');
         $obj->setFooBar('les-tilleuls.coop');
         $obj->setBar_foo('lostinthesupermarket.fr');
@@ -348,7 +367,7 @@ class GetSetMethodNormalizerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException \LogicException
+     * @expectedException \Symfony\Component\Serializer\Exception\LogicException
      * @expectedExceptionMessage Cannot normalize attribute "object" because injected serializer is not a normalizer
      */
     public function testUnableToNormalizeObjectAttribute()
@@ -422,6 +441,14 @@ class GetSetMethodNormalizerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('foo', $obj->getFoo());
         $this->assertEquals('bar', $obj->getBar());
     }
+
+    public function testDenormalizeNonExistingAttribute()
+    {
+        $this->assertEquals(
+            new PropertyDummy(),
+            $this->normalizer->denormalize(array('non_existing' => true), __NAMESPACE__.'\PropertyDummy')
+        );
+    }
 }
 
 class GetSetDummy
@@ -479,7 +506,7 @@ class GetSetDummy
 
     public function otherMethod()
     {
-        throw new \RuntimeException("Dummy::otherMethod() should not be called");
+        throw new \RuntimeException('Dummy::otherMethod() should not be called');
     }
 
     public function setObject($object)
@@ -523,7 +550,7 @@ class GetConstructorDummy
 
     public function otherMethod()
     {
-        throw new \RuntimeException("Dummy::otherMethod() should not be called");
+        throw new \RuntimeException('Dummy::otherMethod() should not be called');
     }
 }
 
@@ -561,7 +588,7 @@ class GetConstructorOptionalArgsDummy
 
     public function otherMethod()
     {
-        throw new \RuntimeException("Dummy::otherMethod() should not be called");
+        throw new \RuntimeException('Dummy::otherMethod() should not be called');
     }
 }
 

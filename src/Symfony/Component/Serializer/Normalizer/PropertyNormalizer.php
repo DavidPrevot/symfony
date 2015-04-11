@@ -12,6 +12,7 @@
 namespace Symfony\Component\Serializer\Normalizer;
 
 use Symfony\Component\Serializer\Exception\CircularReferenceException;
+use Symfony\Component\Serializer\Exception\LogicException;
 use Symfony\Component\Serializer\Exception\RuntimeException;
 
 /**
@@ -46,7 +47,7 @@ class PropertyNormalizer extends AbstractNormalizer
 
         $reflectionObject = new \ReflectionObject($object);
         $attributes = array();
-        $allowedAttributes = $this->getAllowedAttributes($object, $context);
+        $allowedAttributes = $this->getAllowedAttributes($object, $context, true);
 
         foreach ($reflectionObject->getProperties() as $property) {
             if (in_array($property->name, $this->ignoredAttributes)) {
@@ -64,10 +65,14 @@ class PropertyNormalizer extends AbstractNormalizer
 
             $attributeValue = $property->getValue($object);
 
-            if (array_key_exists($property->name, $this->callbacks)) {
+            if (isset($this->callbacks[$property->name])) {
                 $attributeValue = call_user_func($this->callbacks[$property->name], $attributeValue);
             }
             if (null !== $attributeValue && !is_scalar($attributeValue)) {
+                if (!$this->serializer instanceof NormalizerInterface) {
+                    throw new LogicException(sprintf('Cannot normalize attribute "%s" because injected serializer is not a normalizer', $property->name));
+                }
+
                 $attributeValue = $this->serializer->normalize($attributeValue, $format, $context);
             }
 
@@ -89,7 +94,7 @@ class PropertyNormalizer extends AbstractNormalizer
      */
     public function denormalize($data, $class, $format = null, array $context = array())
     {
-        $allowedAttributes = $this->getAllowedAttributes($class, $context);
+        $allowedAttributes = $this->getAllowedAttributes($class, $context, true);
         $data = $this->prepareForDenormalization($data);
 
         $reflectionClass = new \ReflectionClass($class);

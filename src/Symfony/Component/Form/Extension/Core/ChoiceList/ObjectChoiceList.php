@@ -2,12 +2,12 @@
 
 /*
  * This file is part of the Symfony package.
-*
-* (c) Fabien Potencier <fabien@symfony.com>
-*
-* For the full copyright and license information, please view the LICENSE
-* file that was distributed with this source code.
-*/
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace Symfony\Component\Form\Extension\Core\ChoiceList;
 
@@ -32,6 +32,9 @@ use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
  * </code>
  *
  * @author Bernhard Schussek <bschussek@gmail.com>
+ *
+ * @deprecated since Symfony 2.7, to be removed in version 3.0.
+ *             Use {@link \Symfony\Component\Form\ChoiceList\ArrayChoiceList} instead.
  */
 class ObjectChoiceList extends ChoiceList
 {
@@ -93,6 +96,8 @@ class ObjectChoiceList extends ChoiceList
         $this->valuePath = null !== $valuePath ? new PropertyPath($valuePath) : null;
 
         parent::__construct($choices, array(), $preferredChoices);
+
+        trigger_error('The '.__CLASS__.' class is deprecated since version 2.7 and will be removed in 3.0. Use Symfony\Component\Form\ChoiceList\ArrayChoiceList instead.', E_USER_DEPRECATED);
     }
 
     /**

@@ -768,7 +768,7 @@ class ContainerBuilder extends Container implements TaggedContainerInterface
      */
     public function register($id, $class = null)
     {
-        return $this->setDefinition(strtolower($id), new Definition($class));
+        return $this->setDefinition($id, new Definition($class));
     }
 
     /**
@@ -1004,9 +1004,7 @@ class ContainerBuilder extends Container implements TaggedContainerInterface
     public function resolveServices($value)
     {
         if (is_array($value)) {
-            foreach ($value as &$v) {
-                $v = $this->resolveServices($v);
-            }
+            $value = array_map(array($this, 'resolveServices'), $value);
         } elseif ($value instanceof Reference) {
             $value = $this->get((string) $value, $value->getInvalidBehavior());
         } elseif ($value instanceof Definition) {

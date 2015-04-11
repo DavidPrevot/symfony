@@ -38,7 +38,7 @@ class FlashBagTest extends \PHPUnit_Framework_TestCase
         $this->bag->initialize($this->array);
     }
 
-    public function tearDown()
+    protected function tearDown()
     {
         $this->bag = null;
         parent::tearDown();
@@ -134,6 +134,7 @@ class FlashBagTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @covers Symfony\Component\HttpFoundation\Session\Flash\FlashBag::getIterator
+     * @group legacy
      */
     public function testLegacyGetIterator()
     {

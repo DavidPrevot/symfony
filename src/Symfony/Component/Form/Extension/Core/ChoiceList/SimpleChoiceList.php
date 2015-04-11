@@ -28,6 +28,9 @@ namespace Symfony\Component\Form\Extension\Core\ChoiceList;
  * </code>
  *
  * @author Bernhard Schussek <bschussek@gmail.com>
+ *
+ * @deprecated since version 2.7, to be removed in 3.0.
+ *             Use {@link \Symfony\Component\Form\ChoiceList\ArrayChoiceList} instead.
  */
 class SimpleChoiceList extends ChoiceList
 {

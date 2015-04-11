@@ -16,7 +16,7 @@ use Psr\Log\LoggerInterface;
 /**
  * @author Abdellatif Ait boudad <a.aitboudad@gmail.com>
  */
-class LoggingTranslator implements TranslatorInterface
+class LoggingTranslator implements TranslatorInterface, TranslatorBagInterface
 {
     /**
      * @var TranslatorInterface
@@ -35,7 +35,7 @@ class LoggingTranslator implements TranslatorInterface
     public function __construct($translator, LoggerInterface $logger)
     {
         if (!($translator instanceof TranslatorInterface && $translator instanceof TranslatorBagInterface)) {
-            throw new \InvalidArgumentException(sprintf('The Translator "%s" must implements TranslatorInterface and TranslatorBagInterface.', get_class($translator)));
+            throw new \InvalidArgumentException(sprintf('The Translator "%s" must implement TranslatorInterface and TranslatorBagInterface.', get_class($translator)));
         }
 
         $this->translator = $translator;
@@ -82,6 +82,14 @@ class LoggingTranslator implements TranslatorInterface
     public function getLocale()
     {
         return $this->translator->getLocale();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getCatalogue($locale = null)
+    {
+        return $this->translator->getCatalogue($locale);
     }
 
     /**

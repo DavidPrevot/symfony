@@ -57,13 +57,24 @@ class ExceptionListener implements EventSubscriberInterface
         try {
             $response = $event->getKernel()->handle($request, HttpKernelInterface::SUB_REQUEST, true);
         } catch (\Exception $e) {
-            $this->logException($exception, sprintf('Exception thrown when handling an exception (%s: %s)', get_class($e), $e->getMessage()), false);
+            $this->logException($e, sprintf('Exception thrown when handling an exception (%s: %s at %s line %s)', get_class($e), $e->getMessage(), $e->getFile(), $e->getLine()), false);
 
             // set handling to false otherwise it wont be able to handle further more
             $handling = false;
 
-            // re-throw the exception from within HttpKernel as this is a catch-all
-            return;
+            $wrapper = $e;
+
+            while ($prev = $wrapper->getPrevious()) {
+                if ($exception === $wrapper = $prev) {
+                    throw $e;
+                }
+            }
+
+            $prev = new \ReflectionProperty('Exception', 'previous');
+            $prev->setAccessible(true);
+            $prev->setValue($wrapper, $exception);
+
+            throw $e;
         }
 
         $event->setResponse($response);
@@ -81,22 +92,17 @@ class ExceptionListener implements EventSubscriberInterface
     /**
      * Logs an exception.
      *
-     * @param \Exception $exception The original \Exception instance
+     * @param \Exception $exception The \Exception instance
      * @param string     $message   The error message to log
-     * @param bool       $original  False when the handling of the exception thrown another exception
      */
-    protected function logException(\Exception $exception, $message, $original = true)
+    protected function logException(\Exception $exception, $message)
     {
-        $isCritical = !$exception instanceof HttpExceptionInterface || $exception->getStatusCode() >= 500;
-        $context = array('exception' => $exception);
         if (null !== $this->logger) {
-            if ($isCritical) {
-                $this->logger->critical($message, $context);
+            if (!$exception instanceof HttpExceptionInterface || $exception->getStatusCode() >= 500) {
+                $this->logger->critical($message, array('exception' => $exception));
             } else {
-                $this->logger->error($message, $context);
+                $this->logger->error($message, array('exception' => $exception));
             }
-        } elseif (!$original || $isCritical) {
-            error_log($message);
         }
     }
 

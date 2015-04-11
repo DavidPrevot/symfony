@@ -36,13 +36,13 @@ class TwigExtension extends Extension
         $loader = new XmlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('twig.xml');
 
-        foreach ($configs as &$config) {
+        foreach ($configs as $key => $config) {
             if (isset($config['globals'])) {
                 foreach ($config['globals'] as $name => $value) {
                     if (is_array($value) && isset($value['key'])) {
-                        $config['globals'][$name] = array(
+                        $configs[$key]['globals'][$name] = array(
                             'key' => $name,
-                            'value' => $config['globals'][$name],
+                            'value' => $value,
                         );
                     }
                 }
@@ -56,6 +56,14 @@ class TwigExtension extends Extension
         $container->setParameter('twig.exception_listener.controller', $config['exception_controller']);
 
         $container->setParameter('twig.form.resources', $config['form_themes']);
+
+        $envConfiguratorDefinition = $container->getDefinition('twig.configurator.environment');
+        $envConfiguratorDefinition->replaceArgument(0, $config['date']['format']);
+        $envConfiguratorDefinition->replaceArgument(1, $config['date']['interval_format']);
+        $envConfiguratorDefinition->replaceArgument(2, $config['date']['timezone']);
+        $envConfiguratorDefinition->replaceArgument(3, $config['number_format']['decimals']);
+        $envConfiguratorDefinition->replaceArgument(4, $config['number_format']['decimal_point']);
+        $envConfiguratorDefinition->replaceArgument(5, $config['number_format']['thousands_separator']);
 
         $twigFilesystemLoaderDefinition = $container->getDefinition('twig.loader.filesystem');
 

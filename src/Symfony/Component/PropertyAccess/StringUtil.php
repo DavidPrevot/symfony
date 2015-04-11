@@ -60,6 +60,9 @@ class StringUtil
         // indices (index), appendices (appendix), prices (price)
         array('seci', 4, false, true, array('ex', 'ix', 'ice')),
 
+        // movies (movie)
+        array('seivom', 6, true, true, 'movie'),
+
         // babies (baby)
         array('sei', 3, false, true, 'y'),
 
@@ -197,7 +200,7 @@ class StringUtil
         }
 
         // Convert teeth to tooth, feet to foot
-        if (false !== ($pos = strpos($plural, 'ee')) && strlen($plural) > 3) {
+        if (false !== ($pos = strpos($plural, 'ee')) && strlen($plural) > 3 && 'feedback' !== $plural) {
             return substr_replace($plural, 'oo', $pos, 2);
         }
 

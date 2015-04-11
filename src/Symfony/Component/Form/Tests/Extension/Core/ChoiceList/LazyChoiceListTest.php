@@ -15,8 +15,14 @@ use Symfony\Component\Form\Extension\Core\ChoiceList\SimpleChoiceList;
 use Symfony\Component\Form\Extension\Core\ChoiceList\LazyChoiceList;
 use Symfony\Component\Form\Extension\Core\View\ChoiceView;
 
+/**
+ * @group legacy
+ */
 class LazyChoiceListTest extends \PHPUnit_Framework_TestCase
 {
+    /**
+     * @var LazyChoiceListTest_Impl
+     */
     private $list;
 
     protected function setUp()
@@ -57,18 +63,14 @@ class LazyChoiceListTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(array(0 => new ChoiceView('a', 'a', 'A'), 2 => new ChoiceView('c', 'c', 'C')), $this->list->getRemainingViews());
     }
 
-    public function testLegacyGetIndicesForChoices()
+    public function testGetIndicesForChoices()
     {
-        $this->iniSet('error_reporting', -1 & ~E_USER_DEPRECATED);
-
         $choices = array('b', 'c');
         $this->assertSame(array(1, 2), $this->list->getIndicesForChoices($choices));
     }
 
-    public function testLegacyGetIndicesForValues()
+    public function testGetIndicesForValues()
     {
-        $this->iniSet('error_reporting', -1 & ~E_USER_DEPRECATED);
-
         $values = array('b', 'c');
         $this->assertSame(array(1, 2), $this->list->getIndicesForValues($values));
     }
