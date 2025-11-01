@@ -23,7 +23,11 @@ abstract class ServerCommand extends ContainerAwareCommand
      */
     public function isEnabled()
     {
-        if (version_compare(phpversion(), '5.4.0', '<') || defined('HHVM_VERSION')) {
+        if (\PHP_VERSION_ID < 50400 || defined('HHVM_VERSION')) {
+            return false;
+        }
+
+        if (!class_exists('Symfony\Component\Process\Process')) {
             return false;
         }
 
@@ -40,5 +44,28 @@ abstract class ServerCommand extends ContainerAwareCommand
     protected function getLockFile($address)
     {
         return sys_get_temp_dir().'/'.strtr($address, '.:', '--').'.pid';
+    }
+
+    protected function isOtherServerProcessRunning($address)
+    {
+        $lockFile = $this->getLockFile($address);
+
+        if (file_exists($lockFile)) {
+            return true;
+        }
+
+        $pos = strrpos($address, ':');
+        $hostname = substr($address, 0, $pos);
+        $port = substr($address, $pos + 1);
+
+        $fp = @fsockopen($hostname, $port, $errno, $errstr, 5);
+
+        if (false !== $fp) {
+            fclose($fp);
+
+            return true;
+        }
+
+        return false;
     }
 }

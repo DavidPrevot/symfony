@@ -11,14 +11,17 @@
 
 namespace Symfony\Component\Stopwatch\Tests;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Stopwatch\Stopwatch;
 
 /**
  * StopwatchTest.
  *
  * @author Fabien Potencier <fabien@symfony.com>
+ *
+ * @group time-sensitive
  */
-class StopwatchTest extends \PHPUnit_Framework_TestCase
+class StopwatchTest extends TestCase
 {
     const DELTA = 20;
 
@@ -27,7 +30,7 @@ class StopwatchTest extends \PHPUnit_Framework_TestCase
         $stopwatch = new Stopwatch();
         $event = $stopwatch->start('foo', 'cat');
 
-        $this->assertInstanceof('Symfony\Component\Stopwatch\StopwatchEvent', $event);
+        $this->assertInstanceOf('Symfony\Component\Stopwatch\StopwatchEvent', $event);
         $this->assertEquals('cat', $event->getCategory());
         $this->assertSame($event, $stopwatch->getEvent('foo'));
     }
@@ -75,7 +78,7 @@ class StopwatchTest extends \PHPUnit_Framework_TestCase
         usleep(200000);
         $event = $stopwatch->stop('foo');
 
-        $this->assertInstanceof('Symfony\Component\Stopwatch\StopwatchEvent', $event);
+        $this->assertInstanceOf('Symfony\Component\Stopwatch\StopwatchEvent', $event);
         $this->assertEquals(200, $event->getDuration(), null, self::DELTA);
     }
 

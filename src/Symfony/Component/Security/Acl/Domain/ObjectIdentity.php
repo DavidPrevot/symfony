@@ -27,8 +27,6 @@ final class ObjectIdentity implements ObjectIdentityInterface
     private $type;
 
     /**
-     * Constructor.
-     *
      * @param string $identifier
      * @param string $type
      *
@@ -36,7 +34,7 @@ final class ObjectIdentity implements ObjectIdentityInterface
      */
     public function __construct($identifier, $type)
     {
-        if (empty($identifier)) {
+        if ('' === $identifier) {
             throw new \InvalidArgumentException('$identifier cannot be empty.');
         }
         if (empty($type)) {
@@ -52,9 +50,9 @@ final class ObjectIdentity implements ObjectIdentityInterface
      *
      * @param object $domainObject
      *
-     * @throws InvalidDomainObjectException
+     * @return self
      *
-     * @return ObjectIdentity
+     * @throws InvalidDomainObjectException
      */
     public static function fromDomainObject($domainObject)
     {
@@ -66,10 +64,10 @@ final class ObjectIdentity implements ObjectIdentityInterface
             if ($domainObject instanceof DomainObjectInterface) {
                 return new self($domainObject->getObjectIdentifier(), ClassUtils::getRealClass($domainObject));
             } elseif (method_exists($domainObject, 'getId')) {
-                return new self($domainObject->getId(), ClassUtils::getRealClass($domainObject));
+                return new self((string) $domainObject->getId(), ClassUtils::getRealClass($domainObject));
             }
-        } catch (\InvalidArgumentException $invalid) {
-            throw new InvalidDomainObjectException($invalid->getMessage(), 0, $invalid);
+        } catch (\InvalidArgumentException $e) {
+            throw new InvalidDomainObjectException($e->getMessage(), 0, $e);
         }
 
         throw new InvalidDomainObjectException('$domainObject must either implement the DomainObjectInterface, or have a method named "getId".');

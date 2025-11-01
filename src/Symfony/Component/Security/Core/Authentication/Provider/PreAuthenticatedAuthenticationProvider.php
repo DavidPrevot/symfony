@@ -13,6 +13,7 @@ namespace Symfony\Component\Security\Core\Authentication\Provider;
 
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 use Symfony\Component\Security\Core\User\UserCheckerInterface;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
 use Symfony\Component\Security\Core\Authentication\Token\PreAuthenticatedToken;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -33,13 +34,6 @@ class PreAuthenticatedAuthenticationProvider implements AuthenticationProviderIn
     private $userChecker;
     private $providerKey;
 
-    /**
-     * Constructor.
-     *
-     * @param UserProviderInterface $userProvider An UserProviderInterface instance
-     * @param UserCheckerInterface  $userChecker  An UserCheckerInterface instance
-     * @param string                $providerKey  The provider key
-     */
     public function __construct(UserProviderInterface $userProvider, UserCheckerInterface $userChecker, $providerKey)
     {
         $this->userProvider = $userProvider;
@@ -53,14 +47,14 @@ class PreAuthenticatedAuthenticationProvider implements AuthenticationProviderIn
     public function authenticate(TokenInterface $token)
     {
         if (!$this->supports($token)) {
-            return;
+            throw new AuthenticationException('The token is not supported by this authentication provider.');
         }
 
         if (!$user = $token->getUser()) {
             throw new BadCredentialsException('No pre-authenticated principal found in request.');
         }
 
-         $user = $this->userProvider->loadUserByUsername($user);
+        $user = $this->userProvider->loadUserByUsername($user);
 
         $this->userChecker->checkPostAuth($user);
 

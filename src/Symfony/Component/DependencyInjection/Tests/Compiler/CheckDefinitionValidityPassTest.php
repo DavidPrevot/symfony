@@ -11,11 +11,12 @@
 
 namespace Symfony\Component\DependencyInjection\Tests\Compiler;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Compiler\CheckDefinitionValidityPass;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
-class CheckDefinitionValidityPassTest extends \PHPUnit_Framework_TestCase
+class CheckDefinitionValidityPassTest extends TestCase
 {
     /**
      * @expectedException \Symfony\Component\DependencyInjection\Exception\RuntimeException
@@ -56,8 +57,6 @@ class CheckDefinitionValidityPassTest extends \PHPUnit_Framework_TestCase
      */
     public function testLegacyProcessDetectsBothFactorySyntaxesUsed()
     {
-        $this->iniSet('error_reporting', -1 & ~E_USER_DEPRECATED);
-
         $container = new ContainerBuilder();
         $container->register('a')->setFactory(array('a', 'b'))->setFactoryClass('a');
 
@@ -73,6 +72,8 @@ class CheckDefinitionValidityPassTest extends \PHPUnit_Framework_TestCase
         $container->register('d', 'class')->setSynthetic(true);
 
         $this->process($container);
+
+        $this->addToAssertionCount(1);
     }
 
     public function testValidTags()
@@ -84,6 +85,8 @@ class CheckDefinitionValidityPassTest extends \PHPUnit_Framework_TestCase
         $container->register('d', 'class')->addTag('foo', array('bar' => 1.1));
 
         $this->process($container);
+
+        $this->addToAssertionCount(1);
     }
 
     /**

@@ -48,15 +48,13 @@ class Acl implements AuditableAclInterface, NotifyPropertyChanged
     private $listeners = array();
 
     /**
-     * Constructor.
-     *
      * @param int                                 $id
      * @param ObjectIdentityInterface             $objectIdentity
      * @param PermissionGrantingStrategyInterface $permissionGrantingStrategy
      * @param array                               $loadedSids
      * @param bool                                $entriesInheriting
      */
-    public function __construct($id, ObjectIdentityInterface $objectIdentity, PermissionGrantingStrategyInterface $permissionGrantingStrategy, array $loadedSids = array(), $entriesInheriting)
+    public function __construct($id, ObjectIdentityInterface $objectIdentity, PermissionGrantingStrategyInterface $permissionGrantingStrategy, array $loadedSids, $entriesInheriting)
     {
         $this->id = $id;
         $this->objectIdentity = $objectIdentity;
@@ -65,11 +63,6 @@ class Acl implements AuditableAclInterface, NotifyPropertyChanged
         $this->entriesInheriting = $entriesInheriting;
     }
 
-    /**
-     * Adds a property changed listener.
-     *
-     * @param PropertyChangedListener $listener
-     */
     public function addPropertyChangedListener(PropertyChangedListener $listener)
     {
         $this->listeners[] = $listener;
@@ -409,7 +402,7 @@ class Acl implements AuditableAclInterface, NotifyPropertyChanged
         $this->$property = array_values($this->$property);
         $this->onPropertyChanged($property, $oldValue, $this->$property);
 
-        for ($i = $index, $c = count($this->$property); $i < $c; $i++) {
+        for ($i = $index, $c = count($this->$property); $i < $c; ++$i) {
             $this->onEntryPropertyChanged($aces[$i], 'aceOrder', $i + 1, $i);
         }
     }
@@ -435,7 +428,7 @@ class Acl implements AuditableAclInterface, NotifyPropertyChanged
         $aces[$field] = array_values($aces[$field]);
         $this->onPropertyChanged($property, $oldValue, $this->$property);
 
-        for ($i = $index, $c = count($aces[$field]); $i < $c; $i++) {
+        for ($i = $index, $c = count($aces[$field]); $i < $c; ++$i) {
             $this->onEntryPropertyChanged($aces[$field][$i], 'aceOrder', $i + 1, $i);
         }
     }
@@ -480,7 +473,7 @@ class Acl implements AuditableAclInterface, NotifyPropertyChanged
                 array_slice($this->$property, $index)
             );
 
-            for ($i = $index, $c = count($this->$property) - 1; $i < $c; $i++) {
+            for ($i = $index, $c = count($this->$property) - 1; $i < $c; ++$i) {
                 $this->onEntryPropertyChanged($aces[$i + 1], 'aceOrder', $i, $i + 1);
             }
         }
@@ -538,7 +531,7 @@ class Acl implements AuditableAclInterface, NotifyPropertyChanged
                 array_slice($aces[$field], $index)
             );
 
-            for ($i = $index, $c = count($aces[$field]) - 1; $i < $c; $i++) {
+            for ($i = $index, $c = count($aces[$field]) - 1; $i < $c; ++$i) {
                 $this->onEntryPropertyChanged($aces[$field][$i + 1], 'aceOrder', $i, $i + 1);
             }
         }

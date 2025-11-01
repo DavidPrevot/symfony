@@ -34,8 +34,6 @@ class Pbkdf2PasswordEncoder extends BasePasswordEncoder
     private $length;
 
     /**
-     * Constructor.
-     *
      * @param string $algorithm          The digest algorithm to use
      * @param bool   $encodeHashAsBase64 Whether to base64 encode the password hash
      * @param int    $iterations         The number of iterations to use to stretch the password hash
@@ -87,11 +85,11 @@ class Pbkdf2PasswordEncoder extends BasePasswordEncoder
         $blocks = ceil($length / strlen(hash($algorithm, null, true)));
         $digest = '';
 
-        for ($i = 1; $i <= $blocks; $i++) {
+        for ($i = 1; $i <= $blocks; ++$i) {
             $ib = $block = hash_hmac($algorithm, $salt.pack('N', $i), $password, true);
 
             // Iterations
-            for ($j = 1; $j < $iterations; $j++) {
+            for ($j = 1; $j < $iterations; ++$j) {
                 $ib ^= ($block = hash_hmac($algorithm, $block, $password, true));
             }
 

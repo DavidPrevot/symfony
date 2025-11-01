@@ -27,16 +27,14 @@ final class UserSecurityIdentity implements SecurityIdentityInterface
     private $class;
 
     /**
-     * Constructor.
-     *
-     * @param string $username the username representation
-     * @param string $class    the user's fully qualified class name
+     * @param string $username The username representation
+     * @param string $class    The user's fully qualified class name
      *
      * @throws \InvalidArgumentException
      */
     public function __construct($username, $class)
     {
-        if (empty($username)) {
+        if ('' === $username || null === $username) {
             throw new \InvalidArgumentException('$username must not be empty.');
         }
         if (empty($class)) {
@@ -50,9 +48,7 @@ final class UserSecurityIdentity implements SecurityIdentityInterface
     /**
      * Creates a user security identity from a UserInterface.
      *
-     * @param UserInterface $user
-     *
-     * @return UserSecurityIdentity
+     * @return self
      */
     public static function fromAccount(UserInterface $user)
     {
@@ -62,9 +58,7 @@ final class UserSecurityIdentity implements SecurityIdentityInterface
     /**
      * Creates a user security identity from a TokenInterface.
      *
-     * @param TokenInterface $token
-     *
-     * @return UserSecurityIdentity
+     * @return self
      */
     public static function fromToken(TokenInterface $token)
     {

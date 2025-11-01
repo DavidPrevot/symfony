@@ -28,12 +28,6 @@ class SecurityIdentityRetrievalStrategy implements SecurityIdentityRetrievalStra
     private $roleHierarchy;
     private $authenticationTrustResolver;
 
-    /**
-     * Constructor.
-     *
-     * @param RoleHierarchyInterface      $roleHierarchy
-     * @param AuthenticationTrustResolver $authenticationTrustResolver
-     */
     public function __construct(RoleHierarchyInterface $roleHierarchy, AuthenticationTrustResolver $authenticationTrustResolver)
     {
         $this->roleHierarchy = $roleHierarchy;
@@ -51,7 +45,7 @@ class SecurityIdentityRetrievalStrategy implements SecurityIdentityRetrievalStra
         if (!$token instanceof AnonymousToken) {
             try {
                 $sids[] = UserSecurityIdentity::fromToken($token);
-            } catch (\InvalidArgumentException $invalid) {
+            } catch (\InvalidArgumentException $e) {
                 // ignore, user has no user security identity
             }
         }

@@ -3,7 +3,7 @@
     "type": "symfony-bridge",
     "description": "Symfony PHPUnit Bridge",
     "keywords": [],
-    "homepage": "http://symfony.com",
+    "homepage": "https://symfony.com",
     "license": "MIT",
     "authors": [
         {
@@ -12,20 +12,27 @@
         },
         {
             "name": "Symfony Community",
-            "homepage": "http://symfony.com/contributors"
+            "homepage": "https://symfony.com/contributors"
         }
     ],
     "require": {
+        "php": ">=5.3.3 EVEN ON LATEST SYMFONY VERSIONS TO ALLOW USING",
+        "php": "THIS BRIDGE WHEN TESTING LOWEST SYMFONY VERSIONS.",
         "php": ">=5.3.3"
     },
     "suggest": {
         "symfony/debug": "For tracking deprecated interfaces usages at runtime with DebugClassLoader"
     },
+    "conflict": {
+        "phpunit/phpunit": ">=6.0"
+    },
     "autoload": {
         "files": [ "bootstrap.php" ],
-        "psr-0": { "Symfony\\Bridge\\PhpUnit\\": "" }
+        "psr-4": { "Symfony\\Bridge\\PhpUnit\\": "" },
+        "exclude-from-classmap": [
+            "/Tests/"
+        ]
     },
-    "target-dir": "Symfony/Bridge/PhpUnit",
     "minimum-stability": "dev",
     "extra": {
         "branch-alias": {

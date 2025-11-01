@@ -24,16 +24,13 @@ use Symfony\Component\Console\Helper\DescriptorHelper as BaseDescriptorHelper;
  */
 class DescriptorHelper extends BaseDescriptorHelper
 {
-    /**
-     * Constructor.
-     */
     public function __construct()
     {
         $this
-            ->register('txt',  new TextDescriptor())
-            ->register('xml',  new XmlDescriptor())
+            ->register('txt', new TextDescriptor())
+            ->register('xml', new XmlDescriptor())
             ->register('json', new JsonDescriptor())
-            ->register('md',   new MarkdownDescriptor())
+            ->register('md', new MarkdownDescriptor())
         ;
     }
 }

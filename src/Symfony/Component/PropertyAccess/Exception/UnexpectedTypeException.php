@@ -27,7 +27,7 @@ class UnexpectedTypeException extends RuntimeException
      */
     public function __construct($value, $path, $pathIndex = null)
     {
-        if (func_num_args() === 3 && $path instanceof PropertyPathInterface) {
+        if (3 === func_num_args() && $path instanceof PropertyPathInterface) {
             $message = sprintf(
                 'PropertyAccessor requires a graph of objects or arrays to operate on, '.
                 'but it found type "%s" while trying to traverse path "%s" at property "%s".',
@@ -36,7 +36,7 @@ class UnexpectedTypeException extends RuntimeException
                 $path->getElement($pathIndex)
             );
         } else {
-            trigger_error('The '.__CLASS__.' constructor now expects 3 arguments: the invalid property value, the '.__NAMESPACE__.'\PropertyPathInterface object and the current index of the property path.', E_USER_DEPRECATED);
+            @trigger_error('The '.__CLASS__.' constructor now expects 3 arguments: the invalid property value, the '.__NAMESPACE__.'\PropertyPathInterface object and the current index of the property path.', E_USER_DEPRECATED);
 
             $message = sprintf(
                 'Expected argument of type "%s", "%s" given',

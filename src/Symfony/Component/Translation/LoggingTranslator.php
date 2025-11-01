@@ -19,22 +19,19 @@ use Psr\Log\LoggerInterface;
 class LoggingTranslator implements TranslatorInterface, TranslatorBagInterface
 {
     /**
-     * @var TranslatorInterface
+     * @var TranslatorInterface|TranslatorBagInterface
      */
     private $translator;
 
-    /**
-     * @var LoggerInterface
-     */
     private $logger;
 
     /**
-     * @param Translator      $translator
-     * @param LoggerInterface $logger
+     * @param TranslatorInterface $translator The translator must implement TranslatorBagInterface
+     * @param LoggerInterface     $logger
      */
-    public function __construct($translator, LoggerInterface $logger)
+    public function __construct(TranslatorInterface $translator, LoggerInterface $logger)
     {
-        if (!($translator instanceof TranslatorInterface && $translator instanceof TranslatorBagInterface)) {
+        if (!$translator instanceof TranslatorBagInterface) {
             throw new \InvalidArgumentException(sprintf('The Translator "%s" must implement TranslatorInterface and TranslatorBagInterface.', get_class($translator)));
         }
 
@@ -66,8 +63,6 @@ class LoggingTranslator implements TranslatorInterface, TranslatorBagInterface
 
     /**
      * {@inheritdoc}
-     *
-     * @api
      */
     public function setLocale($locale)
     {
@@ -76,8 +71,6 @@ class LoggingTranslator implements TranslatorInterface, TranslatorBagInterface
 
     /**
      * {@inheritdoc}
-     *
-     * @api
      */
     public function getLocale()
     {
@@ -90,6 +83,20 @@ class LoggingTranslator implements TranslatorInterface, TranslatorBagInterface
     public function getCatalogue($locale = null)
     {
         return $this->translator->getCatalogue($locale);
+    }
+
+    /**
+     * Gets the fallback locales.
+     *
+     * @return array $locales The fallback locales
+     */
+    public function getFallbackLocales()
+    {
+        if ($this->translator instanceof Translator || method_exists($this->translator, 'getFallbackLocales')) {
+            return $this->translator->getFallbackLocales();
+        }
+
+        return array();
     }
 
     /**
@@ -109,10 +116,6 @@ class LoggingTranslator implements TranslatorInterface, TranslatorBagInterface
      */
     private function log($id, $domain, $locale)
     {
-        if (null === $locale) {
-            $locale = $this->getLocale();
-        }
-
         if (null === $domain) {
             $domain = 'messages';
         }

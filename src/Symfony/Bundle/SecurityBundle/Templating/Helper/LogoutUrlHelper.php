@@ -27,8 +27,6 @@ class LogoutUrlHelper extends Helper
     private $generator;
 
     /**
-     * Constructor.
-     *
      * @param ContainerInterface|LogoutUrlGenerator $generator    A ContainerInterface or LogoutUrlGenerator instance
      * @param UrlGeneratorInterface|null            $router       The router service
      * @param TokenStorageInterface|null            $tokenStorage The token storage service
@@ -39,7 +37,7 @@ class LogoutUrlHelper extends Helper
     public function __construct($generator, UrlGeneratorInterface $router = null, TokenStorageInterface $tokenStorage = null)
     {
         if ($generator instanceof ContainerInterface) {
-            trigger_error('The '.__CLASS__.' constructor will require a LogoutUrlGenerator instead of a ContainerInterface instance in 3.0.', E_USER_DEPRECATED);
+            @trigger_error('The '.__CLASS__.' constructor will require a LogoutUrlGenerator instead of a ContainerInterface instance in 3.0.', E_USER_DEPRECATED);
 
             if ($generator->has('security.logout_url_generator')) {
                 $this->generator = $generator->get('security.logout_url_generator');

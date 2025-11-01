@@ -3,7 +3,7 @@
     "type": "symfony-bridge",
     "description": "Symfony Monolog Bridge",
     "keywords": [],
-    "homepage": "http://symfony.com",
+    "homepage": "https://symfony.com",
     "license": "MIT",
     "authors": [
         {
@@ -12,16 +12,15 @@
         },
         {
             "name": "Symfony Community",
-            "homepage": "http://symfony.com/contributors"
+            "homepage": "https://symfony.com/contributors"
         }
     ],
     "require": {
         "php": ">=5.3.9",
-        "monolog/monolog": "~1.11"
+        "monolog/monolog": "~1.11",
+        "symfony/http-kernel": "~2.4"
     },
     "require-dev": {
-        "symfony/phpunit-bridge": "~2.7",
-        "symfony/http-kernel": "~2.4",
         "symfony/console": "~2.4",
         "symfony/event-dispatcher": "~2.2"
     },
@@ -31,9 +30,11 @@
         "symfony/event-dispatcher": "Needed when using log messages in console commands."
      },
     "autoload": {
-        "psr-0": { "Symfony\\Bridge\\Monolog\\": "" }
+        "psr-4": { "Symfony\\Bridge\\Monolog\\": "" },
+        "exclude-from-classmap": [
+            "/Tests/"
+        ]
     },
-    "target-dir": "Symfony/Bridge/Monolog",
     "minimum-stability": "dev",
     "extra": {
         "branch-alias": {

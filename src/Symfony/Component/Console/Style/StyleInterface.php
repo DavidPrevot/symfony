@@ -12,7 +12,7 @@
 namespace Symfony\Component\Console\Style;
 
 /**
- * Output style helpers
+ * Output style helpers.
  *
  * @author Kevin Bond <kevinbond@gmail.com>
  */
@@ -34,8 +34,6 @@ interface StyleInterface
 
     /**
      * Formats a list.
-     *
-     * @param array $elements
      */
     public function listing(array $elements);
 
@@ -83,20 +81,17 @@ interface StyleInterface
 
     /**
      * Formats a table.
-     *
-     * @param array $headers
-     * @param array $rows
      */
     public function table(array $headers, array $rows);
 
     /**
      * Asks a question.
      *
-     * @param string          $question
-     * @param string|null     $default
-     * @param callable|null   $validator
+     * @param string        $question
+     * @param string|null   $default
+     * @param callable|null $validator
      *
-     * @return string
+     * @return mixed
      */
     public function ask($question, $default = null, $validator = null);
 
@@ -106,7 +101,7 @@ interface StyleInterface
      * @param string        $question
      * @param callable|null $validator
      *
-     * @return string
+     * @return mixed
      */
     public function askHidden($question, $validator = null);
 
@@ -127,12 +122,12 @@ interface StyleInterface
      * @param array           $choices
      * @param string|int|null $default
      *
-     * @return string
+     * @return mixed
      */
     public function choice($question, array $choices, $default = null);
 
     /**
-     * Add newline(s)
+     * Add newline(s).
      *
      * @param int $count The number of newlines
      */

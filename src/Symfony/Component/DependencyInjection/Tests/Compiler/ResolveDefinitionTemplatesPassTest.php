@@ -11,12 +11,13 @@
 
 namespace Symfony\Component\DependencyInjection\Tests\Compiler;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\DefinitionDecorator;
 use Symfony\Component\DependencyInjection\Compiler\ResolveDefinitionTemplatesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
-class ResolveDefinitionTemplatesPassTest extends \PHPUnit_Framework_TestCase
+class ResolveDefinitionTemplatesPassTest extends TestCase
 {
     public function testProcess()
     {
@@ -117,6 +118,25 @@ class ResolveDefinitionTemplatesPassTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(array(), $def->getTags());
     }
 
+    public function testProcessDoesNotCopyDecoratedService()
+    {
+        $container = new ContainerBuilder();
+
+        $container
+            ->register('parent')
+            ->setDecoratedService('foo')
+        ;
+
+        $container
+            ->setDefinition('child', new DefinitionDecorator('parent'))
+        ;
+
+        $this->process($container);
+
+        $def = $container->getDefinition('child');
+        $this->assertNull($def->getDecoratedService());
+    }
+
     public function testProcessHandlesMultipleInheritance()
     {
         $container = new ContainerBuilder();
@@ -171,6 +191,21 @@ class ResolveDefinitionTemplatesPassTest extends \PHPUnit_Framework_TestCase
         $this->process($container);
 
         $this->assertTrue($container->getDefinition('child1')->isLazy());
+    }
+
+    public function testSetDecoratedServiceOnServiceHasParent()
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('parent', 'stdClass');
+
+        $container->setDefinition('child1', new DefinitionDecorator('parent'))
+            ->setDecoratedService('foo', 'foo_inner')
+        ;
+
+        $this->process($container);
+
+        $this->assertEquals(array('foo', 'foo_inner'), $container->getDefinition('child1')->getDecoratedService());
     }
 
     protected function process(ContainerBuilder $container)

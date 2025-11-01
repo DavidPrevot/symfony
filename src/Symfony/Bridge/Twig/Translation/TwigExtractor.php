@@ -12,9 +12,13 @@
 namespace Symfony\Bridge\Twig\Translation;
 
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Finder\SplFileInfo;
 use Symfony\Component\Translation\Extractor\AbstractFileExtractor;
 use Symfony\Component\Translation\Extractor\ExtractorInterface;
 use Symfony\Component\Translation\MessageCatalogue;
+use Twig\Environment;
+use Twig\Error\Error;
+use Twig\Source;
 
 /**
  * TwigExtractor extracts translation messages from a twig template.
@@ -38,14 +42,9 @@ class TwigExtractor extends AbstractFileExtractor implements ExtractorInterface
      */
     private $prefix = '';
 
-    /**
-     * The twig environment.
-     *
-     * @var \Twig_Environment
-     */
     private $twig;
 
-    public function __construct(\Twig_Environment $twig)
+    public function __construct(Environment $twig)
     {
         $this->twig = $twig;
     }
@@ -55,12 +54,19 @@ class TwigExtractor extends AbstractFileExtractor implements ExtractorInterface
      */
     public function extract($resource, MessageCatalogue $catalogue)
     {
-        $files = $this->extractFiles($resource);
-        foreach ($files as $file) {
+        foreach ($this->extractFiles($resource) as $file) {
             try {
                 $this->extractTemplate(file_get_contents($file->getPathname()), $catalogue);
-            } catch (\Twig_Error $e) {
-                $e->setTemplateFile($file->getRelativePathname());
+            } catch (Error $e) {
+                if ($file instanceof \SplFileInfo) {
+                    $path = $file->getRealPath() ?: $file->getPathname();
+                    $name = $file instanceof SplFileInfo ? $file->getRelativePathname() : $path;
+                    if (method_exists($e, 'setSourceContext')) {
+                        $e->setSourceContext(new Source('', $name, $path));
+                    } else {
+                        $e->setTemplateName($name);
+                    }
+                }
 
                 throw $e;
             }
@@ -77,10 +83,10 @@ class TwigExtractor extends AbstractFileExtractor implements ExtractorInterface
 
     protected function extractTemplate($template, MessageCatalogue $catalogue)
     {
-        $visitor = $this->twig->getExtension('translator')->getTranslationNodeVisitor();
+        $visitor = $this->twig->getExtension('Symfony\Bridge\Twig\Extension\TranslationExtension')->getTranslationNodeVisitor();
         $visitor->enable();
 
-        $this->twig->parse($this->twig->tokenize($template));
+        $this->twig->parse($this->twig->tokenize(new Source($template, '')));
 
         foreach ($visitor->getMessages() as $message) {
             $catalogue->set(trim($message[0]), $this->prefix.trim($message[0]), $message[1] ?: $this->defaultDomain);

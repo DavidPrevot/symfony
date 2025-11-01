@@ -11,6 +11,7 @@
 
 namespace Symfony\Component\Form\Tests;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Form\Extension\Core\DataMapper\PropertyPathMapper;
 use Symfony\Component\Form\Extension\HttpFoundation\HttpFoundationRequestHandler;
 use Symfony\Component\Form\FormError;
@@ -298,6 +299,8 @@ class CompoundFormTest extends AbstractFormTest
     public function testRemoveIgnoresUnknownName()
     {
         $this->form->remove('notexisting');
+
+        $this->assertCount(0, $this->form);
     }
 
     public function testArrayAccess()
@@ -306,12 +309,12 @@ class CompoundFormTest extends AbstractFormTest
 
         $this->form[] = $child;
 
-        $this->assertTrue(isset($this->form['foo']));
+        $this->assertArrayHasKey('foo', $this->form);
         $this->assertSame($child, $this->form['foo']);
 
         unset($this->form['foo']);
 
-        $this->assertFalse(isset($this->form['foo']));
+        $this->assertArrayNotHasKey('foo', $this->form);
     }
 
     public function testCountable()
@@ -350,7 +353,7 @@ class CompoundFormTest extends AbstractFormTest
             ->with('bar', $this->isInstanceOf('\RecursiveIteratorIterator'))
             ->will($this->returnCallback(function ($data, \RecursiveIteratorIterator $iterator) use ($child, $test) {
                 $test->assertInstanceOf('Symfony\Component\Form\Util\InheritDataAwareIterator', $iterator->getInnerIterator());
-                $test->assertSame(array($child), iterator_to_array($iterator));
+                $test->assertSame(array($child->getName() => $child), iterator_to_array($iterator));
             }));
 
         $form->initialize();
@@ -709,7 +712,7 @@ class CompoundFormTest extends AbstractFormTest
             'REQUEST_METHOD' => $method,
         ));
 
-        $form = $this->getBuilder('image')
+        $form = $this->getBuilder('image', null, null, array('allow_file_upload' => true))
             ->setMethod($method)
             ->setRequestHandler(new HttpFoundationRequestHandler())
             ->getForm();
@@ -925,7 +928,7 @@ class CompoundFormTest extends AbstractFormTest
     // Basic cases are covered in SimpleFormTest
     public function testCreateViewWithChildren()
     {
-        $type = $this->getMock('Symfony\Component\Form\ResolvedFormTypeInterface');
+        $type = $this->getMockBuilder('Symfony\Component\Form\ResolvedFormTypeInterface')->getMock();
         $options = array('a' => 'Foo', 'b' => 'Bar');
         $field1 = $this->getMockForm('foo');
         $field2 = $this->getMockForm('bar');
@@ -945,7 +948,7 @@ class CompoundFormTest extends AbstractFormTest
 
         $assertChildViewsEqual = function (array $childViews) use ($test) {
             return function (FormView $view) use ($test, $childViews) {
-                /* @var \PHPUnit_Framework_TestCase $test */
+                /* @var TestCase $test */
                 $test->assertSame($childViews, $view->children);
             };
         };
@@ -1061,6 +1064,43 @@ class CompoundFormTest extends AbstractFormTest
         $this->form->submit(array());
 
         $this->assertSame($button, $this->form->getClickedButton());
+    }
+
+    public function testDisabledButtonIsNotSubmitted()
+    {
+        $button = new SubmitButtonBuilder('submit');
+        $submit = $button
+            ->setDisabled(true)
+            ->getForm();
+
+        $form = $this->createForm()
+            ->add($this->getBuilder('text')->getForm())
+            ->add($submit)
+        ;
+
+        $form->submit(array(
+            'text' => '',
+            'submit' => '',
+        ));
+
+        $this->assertTrue($submit->isDisabled());
+        $this->assertFalse($submit->isClicked());
+        $this->assertFalse($submit->isSubmitted());
+    }
+
+    public function testFileUpload()
+    {
+        $reqHandler = new HttpFoundationRequestHandler();
+        $this->form->add($this->getBuilder('foo')->setRequestHandler($reqHandler)->getForm());
+        $this->form->add($this->getBuilder('bar')->setRequestHandler($reqHandler)->getForm());
+
+        $this->form->submit(array(
+            'foo' => 'Foo',
+            'bar' => new UploadedFile(__FILE__, 'upload.png', 'image/png', 123, UPLOAD_ERR_OK),
+        ));
+
+        $this->assertSame('Submitted data was expected to be text or number, file upload given.', $this->form->get('bar')->getTransformationFailure()->getMessage());
+        $this->assertNull($this->form->get('bar')->getData());
     }
 
     protected function createForm()

@@ -11,13 +11,17 @@
 
 namespace Symfony\Component\Security\Acl\Tests\Dbal;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Acl\Dbal\AclProvider;
 use Symfony\Component\Security\Acl\Domain\PermissionGrantingStrategy;
 use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
 use Symfony\Component\Security\Acl\Dbal\Schema;
 use Doctrine\DBAL\DriverManager;
 
-class AclProviderTest extends \PHPUnit_Framework_TestCase
+/**
+ * @requires extension pdo_sqlite
+ */
+class AclProviderTest extends TestCase
 {
     protected $con;
     protected $insertClassStmt;
@@ -45,11 +49,11 @@ class AclProviderTest extends \PHPUnit_Framework_TestCase
             $this->getProvider()->findAcls($oids);
 
             $this->fail('Provider did not throw an expected exception.');
-        } catch (\Exception $ex) {
-            $this->assertInstanceOf('Symfony\Component\Security\Acl\Exception\AclNotFoundException', $ex);
-            $this->assertInstanceOf('Symfony\Component\Security\Acl\Exception\NotAllAclsFoundException', $ex);
+        } catch (\Exception $e) {
+            $this->assertInstanceOf('Symfony\Component\Security\Acl\Exception\AclNotFoundException', $e);
+            $this->assertInstanceOf('Symfony\Component\Security\Acl\Exception\NotAllAclsFoundException', $e);
 
-            $partialResult = $ex->getPartialResult();
+            $partialResult = $e->getPartialResult();
             $this->assertTrue($partialResult->contains($oids[0]));
             $this->assertFalse($partialResult->contains($oids[1]));
         }
@@ -130,7 +134,7 @@ class AclProviderTest extends \PHPUnit_Framework_TestCase
         $i = 0;
         foreach ($aces as $index => $ace) {
             $this->assertEquals($i, $index);
-            $i++;
+            ++$i;
         }
 
         $sid = $aces[0]->getSecurityIdentity();
@@ -141,10 +145,6 @@ class AclProviderTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        if (!class_exists('PDO') || !in_array('sqlite', \PDO::getAvailableDrivers())) {
-            self::markTestSkipped('This test requires SQLite support in your environment');
-        }
-
         $this->con = DriverManager::getConnection(array(
             'driver' => 'pdo_sqlite',
             'memory' => true,

@@ -55,12 +55,12 @@ class RouterDebugCommand extends ContainerAwareCommand
             ))
             ->setDefinition(array(
                 new InputArgument('name', InputArgument::OPTIONAL, 'A route name'),
-                new InputOption('show-controllers', null,  InputOption::VALUE_NONE, 'Show assigned controllers in overview'),
-                new InputOption('format', null, InputOption::VALUE_REQUIRED, 'To output route(s) in other formats', 'txt'),
+                new InputOption('show-controllers', null, InputOption::VALUE_NONE, 'Show assigned controllers in overview'),
+                new InputOption('format', null, InputOption::VALUE_REQUIRED, 'The output format (txt, xml, json, or md)', 'txt'),
                 new InputOption('raw', null, InputOption::VALUE_NONE, 'To output raw route(s)'),
             ))
             ->setDescription('Displays current routes for an application')
-            ->setHelp(<<<EOF
+            ->setHelp(<<<'EOF'
 The <info>%command.name%</info> displays the configured routes:
 
   <info>php %command.full_name%</info>
@@ -83,10 +83,10 @@ EOF
 
         $name = $input->getArgument('name');
         $helper = new DescriptorHelper();
+        $routes = $this->getContainer()->get('router')->getRouteCollection();
 
         if ($name) {
-            $route = $this->getContainer()->get('router')->getRouteCollection()->get($name);
-            if (!$route) {
+            if (!$route = $routes->get($name)) {
                 throw new \InvalidArgumentException(sprintf('The route "%s" does not exist.', $name));
             }
             $this->convertController($route);
@@ -96,8 +96,6 @@ EOF
                 'name' => $name,
             ));
         } else {
-            $routes = $this->getContainer()->get('router')->getRouteCollection();
-
             foreach ($routes as $route) {
                 $this->convertController($route);
             }

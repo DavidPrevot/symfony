@@ -28,8 +28,6 @@ class ResolveInvalidReferencesPass implements CompilerPassInterface
 
     /**
      * Process the ContainerBuilder to resolve invalid references.
-     *
-     * @param ContainerBuilder $container
      */
     public function process(ContainerBuilder $container)
     {
@@ -47,7 +45,7 @@ class ResolveInvalidReferencesPass implements CompilerPassInterface
             foreach ($definition->getMethodCalls() as $call) {
                 try {
                     $calls[] = array($call[0], $this->processArguments($call[1], true));
-                } catch (RuntimeException $ignore) {
+                } catch (RuntimeException $e) {
                     // this call is simply removed
                 }
             }
@@ -58,7 +56,7 @@ class ResolveInvalidReferencesPass implements CompilerPassInterface
                 try {
                     $value = $this->processArguments(array($value), true);
                     $properties[$name] = reset($value);
-                } catch (RuntimeException $ignore) {
+                } catch (RuntimeException $e) {
                     // ignore property
                 }
             }

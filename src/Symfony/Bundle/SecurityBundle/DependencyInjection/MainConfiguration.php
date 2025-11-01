@@ -16,6 +16,7 @@ use Symfony\Component\Security\Core\Authorization\AccessDecisionManager;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\Security\Http\Session\SessionAuthenticationStrategy;
 
 /**
  * This class contains the configuration information.
@@ -35,12 +36,6 @@ class MainConfiguration implements ConfigurationInterface
     private $factories;
     private $userProviderFactories;
 
-    /**
-     * Constructor.
-     *
-     * @param array $factories
-     * @param array $userProviderFactories
-     */
     public function __construct(array $factories, array $userProviderFactories)
     {
         $this->factories = $factories;
@@ -60,14 +55,20 @@ class MainConfiguration implements ConfigurationInterface
         $rootNode
             ->children()
                 ->scalarNode('access_denied_url')->defaultNull()->example('/foo/error403')->end()
-                ->scalarNode('session_fixation_strategy')->cannotBeEmpty()->info('strategy can be: none, migrate, invalidate')->defaultValue('migrate')->end()
+                ->enumNode('session_fixation_strategy')
+                    ->values(array(SessionAuthenticationStrategy::NONE, SessionAuthenticationStrategy::MIGRATE, SessionAuthenticationStrategy::INVALIDATE))
+                    ->defaultValue(SessionAuthenticationStrategy::MIGRATE)
+                ->end()
                 ->booleanNode('hide_user_not_found')->defaultTrue()->end()
                 ->booleanNode('always_authenticate_before_granting')->defaultFalse()->end()
                 ->booleanNode('erase_credentials')->defaultTrue()->end()
                 ->arrayNode('access_decision_manager')
                     ->addDefaultsIfNotSet()
                     ->children()
-                        ->scalarNode('strategy')->defaultValue(AccessDecisionManager::STRATEGY_AFFIRMATIVE)->end()
+                        ->enumNode('strategy')
+                            ->values(array(AccessDecisionManager::STRATEGY_AFFIRMATIVE, AccessDecisionManager::STRATEGY_CONSENSUS, AccessDecisionManager::STRATEGY_UNANIMOUS))
+                            ->defaultValue(AccessDecisionManager::STRATEGY_AFFIRMATIVE)
+                        ->end()
                         ->booleanNode('allow_if_all_abstain')->defaultFalse()->end()
                         ->booleanNode('allow_if_equal_granted_denied')->defaultTrue()->end()
                     ->end()
@@ -155,6 +156,7 @@ class MainConfiguration implements ConfigurationInterface
                     ->cannotBeOverwritten()
                     ->prototype('array')
                         ->fixXmlConfig('ip')
+                        ->fixXmlConfig('method')
                         ->children()
                             ->scalarNode('requires_channel')->defaultNull()->end()
                             ->scalarNode('path')
@@ -279,7 +281,7 @@ class MainConfiguration implements ConfigurationInterface
             ->arrayNode('anonymous')
                 ->canBeUnset()
                 ->children()
-                    ->scalarNode('key')->defaultValue(uniqid())->end()
+                    ->scalarNode('key')->defaultValue(uniqid('', true))->end()
                 ->end()
             ->end()
             ->arrayNode('switch_user')
@@ -349,7 +351,6 @@ class MainConfiguration implements ConfigurationInterface
                         ),
                         'my_entity_provider' => array('entity' => array('class' => 'SecurityBundle:User', 'property' => 'username')),
                     ))
-                    ->disallowNewKeysInSubsequentConfigs()
                     ->isRequired()
                     ->requiresAtLeastOneElement()
                     ->useAttributeAsKey('name')
@@ -383,11 +384,11 @@ class MainConfiguration implements ConfigurationInterface
 
         $providerNodeBuilder
             ->validate()
-                ->ifTrue(function ($v) {return count($v) > 1;})
+                ->ifTrue(function ($v) { return count($v) > 1; })
                 ->thenInvalid('You cannot set multiple provider types for the same provider')
             ->end()
             ->validate()
-                ->ifTrue(function ($v) {return count($v) === 0;})
+                ->ifTrue(function ($v) { return 0 === count($v); })
                 ->thenInvalid('You must set a provider definition for the provider.')
             ->end()
         ;
@@ -400,11 +401,10 @@ class MainConfiguration implements ConfigurationInterface
             ->children()
                 ->arrayNode('encoders')
                     ->example(array(
-                        'Acme\DemoBundle\Entity\User1' => 'sha512',
-                        'Acme\DemoBundle\Entity\User2' => array(
-                            'algorithm' => 'sha512',
-                            'encode_as_base64' => 'true',
-                            'iterations' => 5000,
+                        'AppBundle\Entity\User1' => 'bcrypt',
+                        'AppBundle\Entity\User2' => array(
+                            'algorithm' => 'bcrypt',
+                            'cost' => 13,
                         ),
                     ))
                     ->requiresAtLeastOneElement()

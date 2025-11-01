@@ -11,12 +11,13 @@
 
 namespace Symfony\Component\Translation\Tests;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Translation\Translator;
 use Symfony\Component\Translation\MessageSelector;
 use Symfony\Component\Translation\Loader\ArrayLoader;
 use Symfony\Component\Translation\MessageCatalogue;
 
-class TranslatorTest extends \PHPUnit_Framework_TestCase
+class TranslatorTest extends TestCase
 {
     /**
      * @dataProvider      getInvalidLocalesTests
@@ -24,7 +25,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
      */
     public function testConstructorInvalidLocale($locale)
     {
-        $translator = new Translator($locale, new MessageSelector());
+        new Translator($locale, new MessageSelector());
     }
 
     /**
@@ -85,6 +86,30 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(new MessageCatalogue('fr'), $translator->getCatalogue('fr'));
     }
 
+    public function testGetCatalogueReturnsConsolidatedCatalogue()
+    {
+        /*
+         * This will be useful once we refactor so that different domains will be loaded lazily (on-demand).
+         * In that case, getCatalogue() will probably have to load all missing domains in order to return
+         * one complete catalogue.
+         */
+
+        $locale = 'whatever';
+        $translator = new Translator($locale);
+        $translator->addLoader('loader-a', new ArrayLoader());
+        $translator->addLoader('loader-b', new ArrayLoader());
+        $translator->addResource('loader-a', array('foo' => 'foofoo'), $locale, 'domain-a');
+        $translator->addResource('loader-b', array('bar' => 'foobar'), $locale, 'domain-b');
+
+        /*
+         * Test that we get a single catalogue comprising messages
+         * from different loaders and different domains
+         */
+        $catalogue = $translator->getCatalogue($locale);
+        $this->assertTrue($catalogue->defines('foo', 'domain-a'));
+        $this->assertTrue($catalogue->defines('bar', 'domain-b'));
+    }
+
     public function testSetFallbackLocales()
     {
         $translator = new Translator('en');
@@ -131,16 +156,16 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
         $translator = new Translator($locale, new MessageSelector());
         $translator->setFallbackLocales(array('fr', $locale));
         // no assertion. this method just asserts that no exception is thrown
+        $this->addToAssertionCount(1);
     }
 
     public function testTransWithFallbackLocale()
     {
         $translator = new Translator('fr_FR');
-        $translator->addLoader('array', new ArrayLoader());
-        $translator->addResource('array', array('foo' => 'foofoo'), 'en_US');
-        $translator->addResource('array', array('bar' => 'foobar'), 'en');
-
         $translator->setFallbackLocales(array('en'));
+
+        $translator->addLoader('array', new ArrayLoader());
+        $translator->addResource('array', array('bar' => 'foobar'), 'en');
 
         $this->assertEquals('foobar', $translator->trans('bar'));
     }
@@ -163,6 +188,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
         $translator = new Translator('fr', new MessageSelector());
         $translator->addResource('array', array('foo' => 'foofoo'), $locale);
         // no assertion. this method just asserts that no exception is thrown
+        $this->addToAssertionCount(1);
     }
 
     public function testAddResourceAfterTrans()
@@ -250,6 +276,36 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
         $translator->trans('foo');
     }
 
+    public function testNestedFallbackCatalogueWhenUsingMultipleLocales()
+    {
+        $translator = new Translator('fr');
+        $translator->setFallbackLocales(array('ru', 'en'));
+
+        $translator->getCatalogue('fr');
+
+        $this->assertNotNull($translator->getCatalogue('ru')->getFallbackCatalogue());
+    }
+
+    public function testFallbackCatalogueResources()
+    {
+        $translator = new Translator('en_GB', new MessageSelector());
+        $translator->addLoader('yml', new \Symfony\Component\Translation\Loader\YamlFileLoader());
+        $translator->addResource('yml', __DIR__.'/fixtures/empty.yml', 'en_GB');
+        $translator->addResource('yml', __DIR__.'/fixtures/resources.yml', 'en');
+
+        // force catalogue loading
+        $this->assertEquals('bar', $translator->trans('foo', array()));
+
+        $resources = $translator->getCatalogue('en')->getResources();
+        $this->assertCount(1, $resources);
+        $this->assertContains(__DIR__.DIRECTORY_SEPARATOR.'fixtures'.DIRECTORY_SEPARATOR.'resources.yml', $resources);
+
+        $resources = $translator->getCatalogue('en_GB')->getResources();
+        $this->assertCount(2, $resources);
+        $this->assertContains(__DIR__.DIRECTORY_SEPARATOR.'fixtures'.DIRECTORY_SEPARATOR.'empty.yml', $resources);
+        $this->assertContains(__DIR__.DIRECTORY_SEPARATOR.'fixtures'.DIRECTORY_SEPARATOR.'resources.yml', $resources);
+    }
+
     /**
      * @dataProvider getTransTests
      */
@@ -280,12 +336,12 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
      */
     public function testTransValidLocale($locale)
     {
-        $translator = new Translator('en', new MessageSelector());
+        $translator = new Translator($locale, new MessageSelector());
         $translator->addLoader('array', new ArrayLoader());
-        $translator->addResource('array', array('foo' => 'foofoo'), 'en');
+        $translator->addResource('array', array('test' => 'OK'), $locale);
 
-        $translator->trans('foo', array(), '', $locale);
-        // no assertion. this method just asserts that no exception is thrown
+        $this->assertEquals('OK', $translator->trans('test'));
+        $this->assertEquals('OK', $translator->trans('test', array(), null, $locale));
     }
 
     /**
@@ -336,6 +392,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
 
         $translator->transChoice('foo', 1, array(), '', $locale);
         // no assertion. this method just asserts that no exception is thrown
+        $this->addToAssertionCount(1);
     }
 
     public function getTransFileTests()
@@ -479,7 +536,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
     public function testGetMessages($resources, $locale, $expected)
     {
         $locales = array_keys($resources);
-        $_locale = !is_null($locale) ? $locale : reset($locales);
+        $_locale = null !== $locale ? $locale : reset($locales);
         $locales = array_slice($locales, 0, array_search($_locale, $locales));
 
         $translator = new Translator($_locale, new MessageSelector());

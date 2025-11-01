@@ -13,7 +13,6 @@ namespace Symfony\Bridge\Doctrine\Form\Type;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\Common\Persistence\ObjectManager;
-use Doctrine\ORM\QueryBuilder;
 use Symfony\Bridge\Doctrine\Form\ChoiceList\DoctrineChoiceLoader;
 use Symfony\Bridge\Doctrine\Form\ChoiceList\EntityLoaderInterface;
 use Symfony\Bridge\Doctrine\Form\ChoiceList\IdReader;
@@ -25,7 +24,6 @@ use Symfony\Component\Form\ChoiceList\Factory\ChoiceListFactoryInterface;
 use Symfony\Component\Form\ChoiceList\Factory\DefaultChoiceListFactory;
 use Symfony\Component\Form\ChoiceList\Factory\PropertyAccessDecorator;
 use Symfony\Component\Form\Exception\RuntimeException;
-use Symfony\Component\Form\Exception\UnexpectedTypeException;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -58,9 +56,9 @@ abstract class DoctrineType extends AbstractType
      *
      * For backwards compatibility, objects are cast to strings by default.
      *
-     * @param object $choice The object.
+     * @param object $choice The object
      *
-     * @return string The string representation of the object.
+     * @return string The string representation of the object
      *
      * @internal This method is public to be usable as callback. It should not
      *           be used in user code.
@@ -77,25 +75,48 @@ abstract class DoctrineType extends AbstractType
      * a single-column integer ID. In that case, the value of the field is
      * the ID of the object. That ID is also used as field name.
      *
-     * @param object     $choice The object.
-     * @param int|string $key    The choice key.
+     * @param object     $choice The object
+     * @param int|string $key    The choice key
      * @param string     $value  The choice value. Corresponds to the object's
      *                           ID here.
      *
-     * @return string The field name.
+     * @return string The field name
      *
      * @internal This method is public to be usable as callback. It should not
      *           be used in user code.
      */
     public static function createChoiceName($choice, $key, $value)
     {
-        return (string) $value;
+        return str_replace('-', '_', (string) $value);
+    }
+
+    /**
+     * Gets important parts from QueryBuilder that will allow to cache its results.
+     * For instance in ORM two query builders with an equal SQL string and
+     * equal parameters are considered to be equal.
+     *
+     * @param object $queryBuilder
+     *
+     * @return array|false Array with important QueryBuilder parts or false if
+     *                     they can't be determined
+     *
+     * @internal This method is public to be usable as callback. It should not
+     *           be used in user code.
+     */
+    public function getQueryBuilderPartsForCachingHash($queryBuilder)
+    {
+        return false;
     }
 
     public function __construct(ManagerRegistry $registry, PropertyAccessorInterface $propertyAccessor = null, ChoiceListFactoryInterface $choiceListFactory = null)
     {
         $this->registry = $registry;
-        $this->choiceListFactory = $choiceListFactory ?: new PropertyAccessDecorator(new DefaultChoiceListFactory(), $propertyAccessor);
+        $this->choiceListFactory = $choiceListFactory ?: new CachingFactoryDecorator(
+            new PropertyAccessDecorator(
+                new DefaultChoiceListFactory(),
+                $propertyAccessor
+            )
+        );
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options)
@@ -117,29 +138,25 @@ abstract class DoctrineType extends AbstractType
         $type = $this;
 
         $choiceLoader = function (Options $options) use ($choiceListFactory, &$choiceLoaders, $type) {
-            // This closure and the "query_builder" options should be pushed to
-            // EntityType in Symfony 3.0 as they are specific to the ORM
-
             // Unless the choices are given explicitly, load them on demand
             if (null === $options['choices']) {
-                // We consider two query builders with an equal SQL string and
-                // equal parameters to be equal
-                $qbParts = $options['query_builder']
-                    ? array(
-                        $options['query_builder']->getQuery()->getSQL(),
-                        $options['query_builder']->getParameters()->toArray(),
-                    )
-                    : null;
+                $hash = null;
+                $qbParts = null;
 
-                $hash = CachingFactoryDecorator::generateHash(array(
-                    $options['em'],
-                    $options['class'],
-                    $qbParts,
-                    $options['loader'],
-                ));
+                // If there is no QueryBuilder we can safely cache DoctrineChoiceLoader,
+                // also if concrete Type can return important QueryBuilder parts to generate
+                // hash key we go for it as well
+                if (!$options['query_builder'] || false !== ($qbParts = $type->getQueryBuilderPartsForCachingHash($options['query_builder']))) {
+                    $hash = CachingFactoryDecorator::generateHash(array(
+                        $options['em'],
+                        $options['class'],
+                        $qbParts,
+                        $options['loader'],
+                    ));
 
-                if (isset($choiceLoaders[$hash])) {
-                    return $choiceLoaders[$hash];
+                    if (isset($choiceLoaders[$hash])) {
+                        return $choiceLoaders[$hash];
+                    }
                 }
 
                 if ($options['loader']) {
@@ -151,7 +168,7 @@ abstract class DoctrineType extends AbstractType
                     $entityLoader = $type->getLoader($options['em'], $queryBuilder, $options['class']);
                 }
 
-                $choiceLoaders[$hash] = new DoctrineChoiceLoader(
+                $doctrineChoiceLoader = new DoctrineChoiceLoader(
                     $choiceListFactory,
                     $options['em'],
                     $options['class'],
@@ -159,7 +176,11 @@ abstract class DoctrineType extends AbstractType
                     $entityLoader
                 );
 
-                return $choiceLoaders[$hash];
+                if (null !== $hash) {
+                    $choiceLoaders[$hash] = $doctrineChoiceLoader;
+                }
+
+                return $doctrineChoiceLoader;
             }
         };
 
@@ -229,7 +250,7 @@ abstract class DoctrineType extends AbstractType
         // deprecation note
         $propertyNormalizer = function (Options $options, $propertyName) {
             if ($propertyName) {
-                trigger_error('The "property" option is deprecated since version 2.7 and will be removed in 3.0. Use "choice_label" instead.', E_USER_DEPRECATED);
+                @trigger_error('The "property" option is deprecated since Symfony 2.7 and will be removed in 3.0. Use "choice_label" instead.', E_USER_DEPRECATED);
             }
 
             return $propertyName;
@@ -240,10 +261,6 @@ abstract class DoctrineType extends AbstractType
         $queryBuilderNormalizer = function (Options $options, $queryBuilder) {
             if (is_callable($queryBuilder)) {
                 $queryBuilder = call_user_func($queryBuilder, $options['em']->getRepository($options['class']));
-
-                if (!$queryBuilder instanceof QueryBuilder) {
-                    throw new UnexpectedTypeException($queryBuilder, 'Doctrine\ORM\QueryBuilder');
-                }
             }
 
             return $queryBuilder;
@@ -252,7 +269,7 @@ abstract class DoctrineType extends AbstractType
         // deprecation note
         $loaderNormalizer = function (Options $options, $loader) {
             if ($loader) {
-                trigger_error('The "loader" option is deprecated since version 2.7 and will be removed in 3.0. Override getLoader() instead.', E_USER_DEPRECATED);
+                @trigger_error('The "loader" option is deprecated since Symfony 2.7 and will be removed in 3.0. Override getLoader() instead.', E_USER_DEPRECATED);
             }
 
             return $loader;
@@ -305,7 +322,6 @@ abstract class DoctrineType extends AbstractType
 
         $resolver->setAllowedTypes('em', array('null', 'string', 'Doctrine\Common\Persistence\ObjectManager'));
         $resolver->setAllowedTypes('loader', array('null', 'Symfony\Bridge\Doctrine\Form\ChoiceList\EntityLoaderInterface'));
-        $resolver->setAllowedTypes('query_builder', array('null', 'callable', 'Doctrine\ORM\QueryBuilder'));
     }
 
     /**

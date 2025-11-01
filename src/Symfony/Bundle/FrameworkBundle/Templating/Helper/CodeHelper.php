@@ -14,8 +14,6 @@ namespace Symfony\Bundle\FrameworkBundle\Templating\Helper;
 use Symfony\Component\Templating\Helper\Helper;
 
 /**
- * CodeHelper.
- *
  * @author Fabien Potencier <fabien@symfony.com>
  */
 class CodeHelper extends Helper
@@ -25,8 +23,6 @@ class CodeHelper extends Helper
     protected $charset;
 
     /**
-     * Constructor.
-     *
      * @param string $fileLinkFormat The format for links to source files
      * @param string $rootDir        The project root directory
      * @param string $charset        The charset
@@ -55,7 +51,7 @@ class CodeHelper extends Helper
         $parts = explode('\\', $class);
         $short = array_pop($parts);
 
-        return sprintf("<abbr title=\"%s\">%s</abbr>", $class, $short);
+        return sprintf('<abbr title="%s">%s</abbr>', $class, $short);
     }
 
     public function abbrMethod($method)
@@ -64,9 +60,9 @@ class CodeHelper extends Helper
             list($class, $method) = explode('::', $method, 2);
             $result = sprintf('%s::%s()', $this->abbrClass($class), $method);
         } elseif ('Closure' === $method) {
-            $result = sprintf("<abbr title=\"%s\">%s</abbr>", $method, $method);
+            $result = sprintf('<abbr title="%s">%1$s</abbr>', $method);
         } else {
-            $result = sprintf("<abbr title=\"%s\">%s</abbr>()", $method, $method);
+            $result = sprintf('<abbr title="%s">%1$s</abbr>()', $method);
         }
 
         return $result;
@@ -86,7 +82,7 @@ class CodeHelper extends Helper
             if ('object' === $item[0]) {
                 $parts = explode('\\', $item[1]);
                 $short = array_pop($parts);
-                $formattedValue = sprintf("<em>object</em>(<abbr title=\"%s\">%s</abbr>)", $item[1], $short);
+                $formattedValue = sprintf('<em>object</em>(<abbr title="%s">%s</abbr>)', $item[1], $short);
             } elseif ('array' === $item[0]) {
                 $formattedValue = sprintf('<em>array</em>(%s)', is_array($item[1]) ? $this->formatArgs($item[1]) : $item[1]);
             } elseif ('string' === $item[0]) {
@@ -119,7 +115,7 @@ class CodeHelper extends Helper
     {
         if (is_readable($file)) {
             if (extension_loaded('fileinfo')) {
-                $finfo = new \Finfo();
+                $finfo = new \finfo();
 
                 // Check if the file is an application/octet-stream (eg. Phar file) because highlight_file cannot parse these files
                 if ('application/octet-stream' === $finfo->file($file, FILEINFO_MIME_TYPE)) {
@@ -132,10 +128,10 @@ class CodeHelper extends Helper
             $code = @highlight_file($file, true);
             // remove main code/span tags
             $code = preg_replace('#^<code.*?>\s*<span.*?>(.*)</span>\s*</code>#s', '\\1', $code);
-            $content = preg_split('#<br />#', $code);
+            $content = explode('<br />', $code);
 
             $lines = array();
-            for ($i = max($line - 3, 1), $max = min($line + 3, count($content)); $i <= $max; $i++) {
+            for ($i = max($line - 3, 1), $max = min($line + 3, count($content)); $i <= $max; ++$i) {
                 $lines[] = '<li'.($i == $line ? ' class="selected"' : '').'><code>'.self::fixCodeMarkup($content[$i - 1]).'</code></li>';
             }
 
@@ -154,24 +150,25 @@ class CodeHelper extends Helper
      */
     public function formatFile($file, $line, $text = null)
     {
+        if (\PHP_VERSION_ID >= 50400) {
+            $flags = ENT_QUOTES | ENT_SUBSTITUTE;
+        } else {
+            $flags = ENT_QUOTES;
+        }
+
         if (null === $text) {
             $file = trim($file);
             $fileStr = $file;
             if (0 === strpos($fileStr, $this->rootDir)) {
-                $fileStr = str_replace($this->rootDir, '', str_replace('\\', '/', $fileStr));
-                $fileStr = sprintf('<abbr title="%s">kernel.root_dir</abbr>/%s', $this->rootDir, $fileStr);
+                $fileStr = str_replace(array('\\', $this->rootDir), array('/', ''), $fileStr);
+                $fileStr = htmlspecialchars($fileStr, $flags, $this->charset);
+                $fileStr = sprintf('<abbr title="%s">kernel.root_dir</abbr>/%s', htmlspecialchars($this->rootDir, $flags, $this->charset), $fileStr);
             }
 
-            $text = "$fileStr at line $line";
+            $text = sprintf('%s at line %d', $fileStr, $line);
         }
 
         if (false !== $link = $this->getFileLink($file, $line)) {
-            if (PHP_VERSION_ID >= 50400) {
-                $flags = ENT_QUOTES | ENT_SUBSTITUTE;
-            } else {
-                $flags = ENT_QUOTES;
-            }
-
             return sprintf('<a href="%s" title="Click to open this file" class="file_link">%s</a>', htmlspecialchars($link, $flags, $this->charset), $text);
         }
 

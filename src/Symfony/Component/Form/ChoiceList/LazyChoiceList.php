@@ -27,11 +27,6 @@ use Symfony\Component\Form\ChoiceList\Loader\ChoiceLoaderInterface;
  */
 class LazyChoiceList implements ChoiceListInterface
 {
-    /**
-     * The choice loader.
-     *
-     * @var ChoiceLoaderInterface
-     */
     private $loader;
 
     /**
@@ -42,13 +37,6 @@ class LazyChoiceList implements ChoiceListInterface
      * @var null|callable
      */
     private $value;
-
-    /**
-     * Whether to use the value callback to compare choices.
-     *
-     * @var bool
-     */
-    private $compareByValue;
 
     /**
      * @var ChoiceListInterface|null
@@ -63,14 +51,12 @@ class LazyChoiceList implements ChoiceListInterface
      * argument.
      *
      * @param ChoiceLoaderInterface $loader The choice loader
-     * @param null|callable         $value  The callable generating the choice
-     *                                      values
+     * @param null|callable         $value  The callable generating the choice values
      */
-    public function __construct(ChoiceLoaderInterface $loader, $value = null, $compareByValue = false)
+    public function __construct(ChoiceLoaderInterface $loader, $value = null)
     {
         $this->loader = $loader;
         $this->value = $value;
-        $this->compareByValue = $compareByValue;
     }
 
     /**
@@ -95,6 +81,30 @@ class LazyChoiceList implements ChoiceListInterface
         }
 
         return $this->loadedList->getValues();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getStructuredValues()
+    {
+        if (!$this->loadedList) {
+            $this->loadedList = $this->loader->loadChoiceList($this->value);
+        }
+
+        return $this->loadedList->getStructuredValues();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getOriginalKeys()
+    {
+        if (!$this->loadedList) {
+            $this->loadedList = $this->loader->loadChoiceList($this->value);
+        }
+
+        return $this->loadedList->getOriginalKeys();
     }
 
     /**

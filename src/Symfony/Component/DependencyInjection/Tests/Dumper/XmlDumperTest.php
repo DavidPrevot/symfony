@@ -11,10 +11,11 @@
 
 namespace Symfony\Component\DependencyInjection\Tests\Dumper;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Dumper\XmlDumper;
 
-class XmlDumperTest extends \PHPUnit_Framework_TestCase
+class XmlDumperTest extends TestCase
 {
     protected static $fixturesPath;
 
@@ -49,8 +50,6 @@ class XmlDumperTest extends \PHPUnit_Framework_TestCase
      */
     public function testLegacyAddService()
     {
-        $this->iniSet('error_reporting', -1 & ~E_USER_DEPRECATED);
-
         $container = include self::$fixturesPath.'/containers/legacy-container9.php';
         $dumper = new XmlDumper($container);
 
@@ -89,21 +88,21 @@ class XmlDumperTest extends \PHPUnit_Framework_TestCase
     {
         $container = include self::$fixturesPath.'/containers/container11.php';
         $dumper = new XmlDumper($container);
-        $this->assertEquals("<?xml version=\"1.0\" encoding=\"utf-8\"?>
-<container xmlns=\"http://symfony.com/schema/dic/services\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd\">
+        $this->assertEquals('<?xml version="1.0" encoding="utf-8"?>
+<container xmlns="http://symfony.com/schema/dic/services" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
   <services>
-    <service id=\"foo\" class=\"FooClass\">
-      <argument type=\"service\">
-        <service class=\"BarClass\">
-          <argument type=\"service\">
-            <service class=\"BazClass\"/>
+    <service id="foo" class="FooClass">
+      <argument type="service">
+        <service class="BarClass">
+          <argument type="service">
+            <service class="BazClass"/>
           </argument>
         </service>
       </argument>
     </service>
   </services>
 </container>
-", $dumper->dump());
+', $dumper->dump());
     }
 
     public function testDumpEntities()
@@ -163,6 +162,8 @@ class XmlDumperTest extends \PHPUnit_Framework_TestCase
         $container->compile();
         $dumper = new XmlDumper($container);
         $dumper->dump();
+
+        $this->addToAssertionCount(1);
     }
 
     public function provideCompiledContainerData()
@@ -182,5 +183,13 @@ class XmlDumperTest extends \PHPUnit_Framework_TestCase
         $dumper = new XmlDumper($container);
 
         $this->assertEquals(file_get_contents(self::$fixturesPath.'/xml/services21.xml'), $dumper->dump());
+    }
+
+    public function testDumpAbstractServices()
+    {
+        $container = include self::$fixturesPath.'/containers/container_abstract.php';
+        $dumper = new XmlDumper($container);
+
+        $this->assertEquals(file_get_contents(self::$fixturesPath.'/xml/services_abstract.xml'), $dumper->dump());
     }
 }

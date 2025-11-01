@@ -47,8 +47,9 @@ class ExceptionListener
     private $errorPage;
     private $logger;
     private $httpUtils;
+    private $stateless;
 
-    public function __construct(TokenStorageInterface $tokenStorage, AuthenticationTrustResolverInterface $trustResolver, HttpUtils $httpUtils, $providerKey, AuthenticationEntryPointInterface $authenticationEntryPoint = null, $errorPage = null, AccessDeniedHandlerInterface $accessDeniedHandler = null, LoggerInterface $logger = null)
+    public function __construct(TokenStorageInterface $tokenStorage, AuthenticationTrustResolverInterface $trustResolver, HttpUtils $httpUtils, $providerKey, AuthenticationEntryPointInterface $authenticationEntryPoint = null, $errorPage = null, AccessDeniedHandlerInterface $accessDeniedHandler = null, LoggerInterface $logger = null, $stateless = false)
     {
         $this->tokenStorage = $tokenStorage;
         $this->accessDeniedHandler = $accessDeniedHandler;
@@ -58,12 +59,11 @@ class ExceptionListener
         $this->authenticationTrustResolver = $trustResolver;
         $this->errorPage = $errorPage;
         $this->logger = $logger;
+        $this->stateless = $stateless;
     }
 
     /**
      * Registers a onKernelException listener to take care of security exceptions.
-     *
-     * @param EventDispatcherInterface $dispatcher An EventDispatcherInterface instance
      */
     public function register(EventDispatcherInterface $dispatcher)
     {
@@ -72,8 +72,6 @@ class ExceptionListener
 
     /**
      * Unregisters the dispatcher.
-     *
-     * @param EventDispatcherInterface $dispatcher An EventDispatcherInterface instance
      */
     public function unregister(EventDispatcherInterface $dispatcher)
     {
@@ -82,8 +80,6 @@ class ExceptionListener
 
     /**
      * Handles security related exceptions.
-     *
-     * @param GetResponseForExceptionEvent $event An GetResponseForExceptionEvent instance
      */
     public function onKernelException(GetResponseForExceptionEvent $event)
     {
@@ -168,9 +164,6 @@ class ExceptionListener
     }
 
     /**
-     * @param Request                 $request
-     * @param AuthenticationException $authException
-     *
      * @return Response
      *
      * @throws AuthenticationException
@@ -185,7 +178,9 @@ class ExceptionListener
             $this->logger->debug('Calling Authentication entry point.');
         }
 
-        $this->setTargetPath($request);
+        if (!$this->stateless) {
+            $this->setTargetPath($request);
+        }
 
         if ($authException instanceof AccountStatusException) {
             // remove the security token to prevent infinite redirect loops
@@ -199,13 +194,10 @@ class ExceptionListener
         return $this->authenticationEntryPoint->start($request, $authException);
     }
 
-    /**
-     * @param Request $request
-     */
     protected function setTargetPath(Request $request)
     {
         // session isn't required when using HTTP basic authentication mechanism for example
-        if ($request->hasSession() && $request->isMethodSafe()) {
+        if ($request->hasSession() && $request->isMethodSafe(false) && !$request->isXmlHttpRequest()) {
             $request->getSession()->set('_security.'.$this->providerKey.'.target_path', $request->getUri());
         }
     }

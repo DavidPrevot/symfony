@@ -20,6 +20,7 @@ use Symfony\Bridge\Twig\Tests\Extension\Fixtures\StubFilesystemLoader;
 use Symfony\Component\Form\ChoiceList\View\ChoiceView;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\Form\Tests\AbstractDivLayoutTest;
+use Twig\Environment;
 
 class FormExtensionDivLayoutTest extends AbstractDivLayoutTest
 {
@@ -40,7 +41,7 @@ class FormExtensionDivLayoutTest extends AbstractDivLayoutTest
             'form_div_layout.html.twig',
             'custom_widgets.html.twig',
         ));
-        $renderer = new TwigRenderer($rendererEngine, $this->getMock('Symfony\Component\Security\Csrf\CsrfTokenManagerInterface'));
+        $renderer = new TwigRenderer($rendererEngine, $this->getMockBuilder('Symfony\Component\Security\Csrf\CsrfTokenManagerInterface')->getMock());
 
         $this->extension = new FormExtension($renderer);
 
@@ -49,7 +50,7 @@ class FormExtensionDivLayoutTest extends AbstractDivLayoutTest
             __DIR__.'/Fixtures/templates/form',
         ));
 
-        $environment = new \Twig_Environment($loader, array('strict_variables' => true));
+        $environment = new Environment($loader, array('strict_variables' => true));
         $environment->addExtension(new TranslationExtension(new StubTranslator()));
         $environment->addGlobal('global', '');
         // the value can be any template that exists
@@ -105,7 +106,11 @@ class FormExtensionDivLayoutTest extends AbstractDivLayoutTest
 
         $renderer = $this->extension->renderer;
         $renderer->setTheme($view, array('page_dynamic_extends.html.twig'));
-        $renderer->searchAndRenderBlock($view, 'row');
+
+        $this->assertMatchesXpath(
+            $renderer->searchAndRenderBlock($view, 'row'),
+            '/div/label[text()="child"]'
+        );
     }
 
     public function isSelectedChoiceProvider()
@@ -136,9 +141,45 @@ class FormExtensionDivLayoutTest extends AbstractDivLayoutTest
      */
     public function testIsChoiceSelected($expected, $choice, $value)
     {
-        $choice = new ChoiceView($choice.' label', $choice, $choice);
+        $choice = new ChoiceView($choice, $choice, $choice.' label');
 
         $this->assertSame($expected, $this->extension->isSelectedChoice($choice, $value));
+    }
+
+    public function isRootFormProvider()
+    {
+        return array(
+            array(true, new FormView()),
+            array(false, new FormView(new FormView())),
+        );
+    }
+
+    /**
+     * @dataProvider isRootFormProvider
+     */
+    public function testIsRootForm($expected, FormView $formView)
+    {
+        $this->assertSame($expected, $this->extension->isRootForm($formView));
+    }
+
+    public function testMoneyWidgetInIso()
+    {
+        $environment = new Environment(new StubFilesystemLoader(array(
+            __DIR__.'/../../Resources/views/Form',
+            __DIR__.'/Fixtures/templates/form',
+        )), array('strict_variables' => true));
+        $environment->addExtension(new TranslationExtension(new StubTranslator()));
+        $environment->addExtension($this->extension);
+        $environment->setCharset('ISO-8859-1');
+
+        $this->extension->initRuntime($environment);
+
+        $view = $this->factory
+            ->createNamed('name', 'money')
+            ->createView()
+        ;
+
+        $this->assertSame('&euro; <input type="text" id="name" name="name" required="required" />', $this->renderWidget($view));
     }
 
     protected function renderForm(FormView $view, array $vars = array())
@@ -153,7 +194,7 @@ class FormExtensionDivLayoutTest extends AbstractDivLayoutTest
 
     protected function renderLabel(FormView $view, $label = null, array $vars = array())
     {
-        if ($label !== null) {
+        if (null !== $label) {
             $vars += array('label' => $label);
         }
 
@@ -207,5 +248,40 @@ class FormExtensionDivLayoutTest extends AbstractDivLayoutTest
         return array(
             array(array('parent_label.html.twig'), array('child_label.html.twig')),
         );
+    }
+
+    public function testRange()
+    {
+        $this->markTestIncomplete('No-op for forward compatibility with AbstractLayoutTest 2.8');
+    }
+
+    public function testRangeWithMinMaxValues()
+    {
+        $this->markTestIncomplete('No-op for forward compatibility with AbstractLayoutTest 2.8');
+    }
+
+    public function testLabelWithoutTranslationOnButton()
+    {
+        $this->markTestIncomplete('No-op for forward compatibility with AbstractLayoutTest 2.8');
+    }
+
+    public function testSingleChoiceWithPlaceholderWithoutTranslation()
+    {
+        $this->markTestIncomplete('No-op for forward compatibility with AbstractLayoutTest 2.8');
+    }
+
+    public function testSingleChoiceExpandedWithPlaceholderWithoutTranslation()
+    {
+        $this->markTestIncomplete('No-op for forward compatibility with AbstractLayoutTest 2.8');
+    }
+
+    public function testButtonlabelWithoutTranslation()
+    {
+        $this->markTestIncomplete('No-op for forward compatibility with AbstractLayoutTest 2.8');
+    }
+
+    public function testAttributesNotTranslatedWhenTranslationDomainIsFalse()
+    {
+        $this->markTestIncomplete('No-op for forward compatibility with AbstractLayoutTest 2.8');
     }
 }

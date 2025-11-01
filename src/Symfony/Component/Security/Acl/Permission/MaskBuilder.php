@@ -78,11 +78,11 @@ class MaskBuilder extends AbstractMaskBuilder
         $length = strlen($pattern);
         $bitmask = str_pad(decbin($this->mask), $length, '0', STR_PAD_LEFT);
 
-        for ($i = $length - 1; $i >= 0; $i--) {
+        for ($i = $length - 1; $i >= 0; --$i) {
             if ('1' === $bitmask[$i]) {
                 try {
                     $pattern[$i] = self::getCode(1 << ($length - $i - 1));
-                } catch (\Exception $notPredefined) {
+                } catch (\Exception $e) {
                     $pattern[$i] = self::ON;
                 }
             }
@@ -96,10 +96,10 @@ class MaskBuilder extends AbstractMaskBuilder
      *
      * @param int $mask
      *
+     * @return string
+     *
      * @throws \InvalidArgumentException
      * @throws \RuntimeException
-     *
-     * @return string
      */
     public static function getCode($mask)
     {
@@ -124,7 +124,7 @@ class MaskBuilder extends AbstractMaskBuilder
     }
 
     /**
-     * Returns the mask for the passed code
+     * Returns the mask for the passed code.
      *
      * @param mixed $code
      *

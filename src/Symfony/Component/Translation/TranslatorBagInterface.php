@@ -12,7 +12,7 @@
 namespace Symfony\Component\Translation;
 
 /**
- * TranslatorBagInterface
+ * TranslatorBagInterface.
  *
  * @author Abdellatif Ait boudad <a.aitboudad@gmail.com>
  */
@@ -24,6 +24,8 @@ interface TranslatorBagInterface
      * @param string|null $locale The locale or null to use the default
      *
      * @return MessageCatalogueInterface
+     *
+     * @throws \InvalidArgumentException If the locale contains invalid characters
      */
     public function getCatalogue($locale = null);
 }

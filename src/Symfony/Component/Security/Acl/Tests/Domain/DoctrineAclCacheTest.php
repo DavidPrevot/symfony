@@ -11,6 +11,7 @@
 
 namespace Symfony\Component\Security\Acl\Tests\Domain;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Acl\Domain\UserSecurityIdentity;
 use Symfony\Component\Security\Acl\Domain\ObjectIdentity;
 use Symfony\Component\Security\Acl\Domain\PermissionGrantingStrategy;
@@ -18,7 +19,7 @@ use Symfony\Component\Security\Acl\Domain\Acl;
 use Symfony\Component\Security\Acl\Domain\DoctrineAclCache;
 use Doctrine\Common\Cache\ArrayCache;
 
-class DoctrineAclCacheTest extends \PHPUnit_Framework_TestCase
+class DoctrineAclCacheTest extends TestCase
 {
     protected $permissionGrantingStrategy;
 
@@ -72,7 +73,7 @@ class DoctrineAclCacheTest extends \PHPUnit_Framework_TestCase
         $acl->insertClassFieldAce('foo', $sid, 1);
         $acl->insertObjectAce($sid, 1);
         $acl->insertObjectFieldAce('foo', $sid, 1);
-        $id++;
+        ++$id;
 
         if ($depth > 0) {
             $acl->setParentAcl($this->getAcl($depth - 1));
